@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/gray_dark"
+    android:orientation="vertical"
+    tools:context=".LoginActivity">
+
+    <ImageView
+        android:id="@+id/imgBanner"
+        android:layout_width="match_parent"
+        android:layout_height="207dp"
+        android:layout_marginTop="20dp"
+        android:src="@mipmap/banner"/>
+
+    <TextView
+        android:id="@+id/txtInvitation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/invitation"
+        android:gravity="center_horizontal"
+        android:textSize="15sp"
+        android:textColor="@color/orange"
+        android:layout_marginVertical="20dp"
+        android:layout_below="@+id/imgBanner"
+        style="@style/viewCustom"/>
+
+    <EditText
+        android:id="@+id/etEmail"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ems="8"
+        android:gravity="center_horizontal"
+        android:hint="@string/email"
+        android:textColor="@color/white"
+        android:textColorHint="@color/white"
+        android:shadowColor="@color/white"
+        android:inputType="textEmailAddress"
+        android:backgroundTint="@color/white"
+        style="@style/viewCustom"
+        android:layout_below="@+id/txtInvitation"/>
+
+    <EditText
+        android:id="@+id/etPassword"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ems="8"
+        android:gravity="center_horizontal"
+        android:hint="@string/password"
+        android:textColor="@color/white"
+        android:textColorHint="@color/white"
+        android:shadowColor="@color/white"
+        android:inputType="textPassword"
+        android:backgroundTint="@color/white"
+        style="@style/viewCustom"
+        android:layout_below="@+id/etEmail"/>
+
+    <EditText
+        android:id="@+id/etRepeatPassword"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ems="8"
+        android:gravity="center_horizontal"
+        android:hint="@string/passwordRep"
+        android:textColor="@color/white"
+        android:textColorHint="@color/white"
+        android:shadowColor="@color/white"
+        android:inputType="textPassword"
+        android:backgroundTint="@color/white"
+        style="@style/viewCustom"
+        android:layout_below="@+id/etPassword"/>
+
+    <LinearLayout
+        android:id="@+id/lyLogin"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/etRepeatPassword"
+        android:gravity="center"
+        android:layout_gravity="center">
+
+        <Button
+            android:id="@+id/btnLogin"
+            android:layout_width="200dp"
+            android:layout_height="45dp"
+            android:text="@string/login"
+            android:layout_marginVertical="20dp"
+            android:gravity="center"
+            android:layout_gravity="center"
+            android:background="@drawable/rounded_button_login"
+            style="@style/viewCustom"/>
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/txtForgotPassword"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/forgotPassword"
+        android:gravity="center_horizontal"
+        android:textSize="12sp"
+        android:onClick="forgotPassword"
+        android:textColor="@color/gray"
+        style="@style/viewCustom"
+        android:layout_below="@+id/lyLogin"/>
+
+    <LinearLayout
+        android:id="@+id/lyTerms"
+        android:layout_width="wrap_content"
+        android:layout_height="50dp"
+        android:gravity="center"
+        android:orientation="horizontal"
+        style="@style/viewCustom"
+        android:layout_below="@+id/txtForgotPassword">
+
+        <CheckBox
+            android:id="@+id/cbAccept"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/accept"
+            android:gravity="center"
+            android:textSize="11sp"
+            android:textColor="@color/gray"/>
+
+        <TextView
+            android:id="@+id/txtTerms"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="3dp"
+            android:text="@string/terms"
+            android:gravity="center_horizontal"
+            android:textSize="11sp"
+            android:textColor="@color/salmon"
+            android:textStyle="bold|italic"
+            android:onClick="goTerms" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_gravity="center"
+        android:gravity="center"
+        style="@style/viewCustom"
+        android:layout_below="@+id/lyTerms">
+
+        <ImageButton
+            android:id="@+id/btnSignGoogle"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:background="@drawable/rounded_button_login_google"
+            android:src="@drawable/google"
+            android:layout_gravity="center" />
+
+        <ImageButton
+            android:id="@+id/btnSignFacebook"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:background="@drawable/rounded_button_login_facebook"
+            android:layout_gravity="center"
+            android:layout_marginLeft="30dp"
+            android:src="@drawable/facebook"/>
+
+    </LinearLayout>
+
+
+
+</RelativeLayout>

@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "688022240824",
+    "project_id": "sports-game-android",
+    "storage_bucket": "sports-game-android.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:688022240824:android:3642cbdcd203db200670cd",
+        "android_client_info": {
+          "package_name": "com.monksoft.sportsgame"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "688022240824-r35kjui3lesvmnefko64m23lg8dltcfc.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBikc99J7Wd1ui_hbaOfoR6CEzhafrWyPM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "688022240824-r35kjui3lesvmnefko64m23lg8dltcfc.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
