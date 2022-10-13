@@ -1,28 +1,32 @@
 package com.monksoft.sportsgame
 
-import android.content.Context
 import android.content.Intent
-import android.opengl.Visibility
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.text.TextUtils
 import android.util.Log
 import android.view.View
-import android.widget.EditText
-import android.widget.LinearLayout
-import android.widget.RelativeLayout
 import android.widget.Toast
 import androidx.core.content.ContextCompat
-import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
-import com.google.api.Distribution.BucketOptions.Linear
+import com.facebook.CallbackManager
+import com.facebook.FacebookCallback
+import com.facebook.FacebookException
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firestore.v1.FirestoreGrpc.FirestoreBlockingStub
 import com.monksoft.sportsgame.databinding.ActivityLoginBinding
 import java.text.SimpleDateFormat
 import java.util.Date
 import kotlin.properties.Delegates
+import com.facebook.FacebookSdk;
+import com.facebook.appevents.AppEventsLogger;
+import com.facebook.login.LoginManager
+import com.facebook.login.LoginResult
+import com.google.firebase.auth.FacebookAuthProvider
 
 class LoginActivity : AppCompatActivity() {
 
@@ -31,12 +35,16 @@ class LoginActivity : AppCompatActivity() {
         lateinit var providerSession: String
     }
 
+    private val REQ_ONE_TAP = 100  // Can be any integer unique to the Activity
+    private var showOneTapUI = true
+
     lateinit var binding: ActivityLoginBinding
 
     private var email by Delegates.notNull<String>()
     private var password by Delegates.notNull<String>()
 
     private lateinit var mAuth: FirebaseAuth
+    private var callbackManager = CallbackManager.Factory.create()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,13 +52,25 @@ class LoginActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         binding.lyTerms.visibility = View.INVISIBLE
-        binding.etRepeatPassword.visibility = View.INVISIBLE
+        binding.etRepeatPassword.visibility = View.GONE
         mAuth = FirebaseAuth.getInstance()
 
         binding.btnLogin.isEnabled = false
-        binding.btnLogin.setOnClickListener { loginUser() }
+
+        onClickOptions()
+
         binding.etEmail.doOnTextChanged { _, _, _, _ -> validateData()}
         binding.etPassword.doOnTextChanged { _, _, _, _ -> validateData() }
+    }
+
+    private fun onClickOptions(){
+        binding.btnLogin.setOnClickListener { loginUser() }
+        binding.btnSignGoogle.setOnClickListener {
+            Log.i("TEST", "Login con google")
+            signGoogle() }
+        binding.btnSignFacebook.setOnClickListener {
+            Log.i("TEST", "Login con facebook")
+            signFacebook() }
     }
 
     private fun validateData() {
@@ -80,18 +100,14 @@ class LoginActivity : AppCompatActivity() {
         startActivity(startMain)
     }
 
-    fun loginUser() {
+    private fun loginUser() {
         email = binding.etEmail.text.toString().trim()
         password = binding.etPassword.text.toString().trim()
 
         when {
-            TextUtils.isEmpty(email) -> {
-                Toast.makeText(this, "Enter Email ID! ", Toast.LENGTH_SHORT).show()
-            }
+            TextUtils.isEmpty(email) -> { Toast.makeText(this, "Enter Email ID! ", Toast.LENGTH_SHORT).show() }
 
-            TextUtils.isEmpty(password) -> {
-                Toast.makeText(this, "Enter Password! ", Toast.LENGTH_SHORT).show()
-            }
+            TextUtils.isEmpty(password) -> { Toast.makeText(this, "Enter Password! ", Toast.LENGTH_SHORT).show() }
 
             else -> {
                 mAuth.signInWithEmailAndPassword(email, password)
@@ -184,6 +200,75 @@ class LoginActivity : AppCompatActivity() {
                             ).show()
                         }
                 }
+            }
+        }
+    }
+
+    private fun signGoogle(){
+        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(getString(R.string.default_web_client_id))
+            .requestEmail()
+            .build()
+
+        var googleSignInClient = GoogleSignIn.getClient(this, gso)
+        googleSignInClient.signOut()
+
+        startActivityForResult(googleSignInClient.signInIntent, REQ_ONE_TAP)
+    }
+
+    private fun signFacebook() {
+        LoginManager.getInstance().logInWithReadPermissions(this, listOf("email"))
+
+        LoginManager.getInstance().registerCallback(callbackManager, object : FacebookCallback<LoginResult> {
+            override fun onSuccess(result: LoginResult) {
+                //handleFacebookAccessToken(loginResult.accessToken)
+                result.let {
+                    val token = it.accessToken
+                    val credential = FacebookAuthProvider.getCredential(token.token)
+                    mAuth.signInWithCredential(credential).addOnCompleteListener {
+                        email = it.result.user?.email.toString()
+                        if(it.isSuccessful) goHome(email, "facebook")
+                        else showError("facebook")
+                    }
+                }
+            }
+
+            override fun onCancel() {
+            }
+
+            override fun onError(error: FacebookException) {
+                showError("facebook")
+            }
+        })
+    }
+
+    private fun showError(provider : String){
+        Toast.makeText(this, "Error conecting with $provider! ", Toast.LENGTH_SHORT).show()
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+
+        callbackManager.onActivityResult(resultCode, resultCode, data)
+
+        super.onActivityResult(requestCode, resultCode, data)
+
+        // Result returned from launching the Intent from GoogleSignInApi.getSignInIntent(...);
+        if (requestCode == REQ_ONE_TAP) {
+            try {
+                val task = GoogleSignIn.getSignedInAccountFromIntent(data)
+                // Google Sign In was successful, authenticate with Firebase
+                val account = task.getResult(ApiException::class.java)!!
+
+                if(account!=null){
+                    email = account.email.toString()
+                    val credential = GoogleAuthProvider.getCredential(account.idToken, null)
+                    mAuth.signInWithCredential(credential).addOnCompleteListener{
+                        if(it.isSuccessful) goHome(email, "google")
+                        else showError("google")
+                    }
+                }
+            } catch (e: ApiException) {
+                showError("google")
             }
         }
     }
