@@ -51,4 +51,17 @@ object Utility {
                 "${if (minutes < 10) "0" else ""}$minutes:" +
                 "${if (seconds < 10) "0" else ""}$seconds"
     }
+
+    fun roundNumber(data: String, decimals: Int) : String{
+        var d : String = data
+        val p = d.indexOf(".", 0)
+
+        if (p != null){
+            var limit: Int = p+decimals +1
+            if (d.length <= p+decimals+1) limit = d.length //-1
+            d = d.subSequence(0, limit).toString()
+        }
+
+        return d
+    }
 }

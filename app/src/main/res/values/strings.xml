@@ -95,4 +95,9 @@
     <string name="medalDistanceDescription">Distancia [Record Personal]</string>
     <string name="medalAvgSpeedDescription">Vel. Máx. [Record Personal]</string>
     <string name="medalMaxSpeedDescription">Vel. Prom. [Record Personal]</string>
+
+    <string name="alertActivationGPSTitle">Permitir acceso a ubicación</string>
+    <string name="alertActivationGPSDescription">Si desea obtener datos de su carrera como la distancia recorrida y la velocidad debe activar el GPS</string>
+    <string name="ignoreActivationGPS">Ignorar</string>
+    <string name="aceptActivationGPS">Activar</string>
 </resources>
