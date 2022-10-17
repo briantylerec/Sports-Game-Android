@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item android:id="@+id/orderby_date"
+        android:title="@string/orderby_dateZA"/>
+    <item android:id="@+id/orderby_duration"
+        android:title="@string/orderby_durationZA"/>
+    <item android:id="@+id/orderby_distance"
+        android:title="@string/orderby_distanceZA"/>
+    <item android:id="@+id/orderby_avgspeed"
+        android:title="@string/orderby_avgspeedZA"/>
+    <item android:id="@+id/orderby_maxspeed"
+        android:title="@string/orderby_maxspeedZA"/>
+
+    <!-- si queremos que una opcion aparezca SIEMPRE hay que poner esto
+
+    en la cabecera del menu
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+
+    en la etiqueta del item, la siguiente propiedad
+    app:showAsAction="always"
+    tambien de paso se le podria poner un icono
+    android:icon="@drawable/ic_action_name"
+
+    -->
+</menu>

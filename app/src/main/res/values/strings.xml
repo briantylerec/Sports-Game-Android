@@ -27,4 +27,72 @@
     <string name="fb_login_protocol_scheme">fb1245787192871314</string>
     <string name="facebook_client_token">f9e8321fd284798542961d859d3715ed</string>
 
+
+    <string name="bar_title">Sport Games by Brian Mora</string>
+    <string name="menu_running">Running</string>
+    <string name="menu_record">Historial</string>
+    <string name="menu_becamepremium">Hazte Premium</string>
+    <string name="menu_clearpreferences">Reestablecer Ajustes</string>
+    <string name="menu_signout">Cerrar Sesión</string>
+    <string name="menu_offercourse">¿Quieres aprender a desarrollar apps? Entra aquí</string>
+
+    <string name="level">Nivel</string>
+    <string name="nav_hi">Quien mueve las piernas mueve el corazón. ¡Muévete, corazón!</string>
+    <string name="user">blabla@wildrunning.com</string>
+
+
+    <string name="navigation_drawer_open">Menu</string>
+    <string name="navigation_drawer_close">Close</string>
+
+    <string name="bar_title_record">Tomaquetomatá</string>
+
+    <string name="orderby_dateZA">Fecha (Recientes primero)</string>
+    <string name="orderby_durationZA">Duración (Mayores primero)</string>
+    <string name="orderby_distanceZA">Distancia (Mayores primero)</string>
+    <string name="orderby_avgspeedZA">Vel. Prom. (Mayores primero)</string>
+    <string name="orderby_maxspeedZA">Vel. Máx. (Mayores primero)</string>
+
+    <string name="orderby_dateAZ">Fecha (Antiguos primero)</string>
+    <string name="orderby_durationAZ">Duración (Menores primero)</string>
+    <string name="orderby_distanceAZ">Distancia (Menores primero)</string>
+    <string name="orderby_avgspeedAZ">Vel. Prom. (Menores primero)</string>
+    <string name="orderby_maxspeedAZ">Vel. Máx. (Menores primero)</string>
+    
+    
+    <string name="start">VAVAVA</string>
+    <string name="stop">TATE QUIETO</string>
+    <string name="finish">Finalizar</string>
+    <string name="rounds">Round 1</string>
+    <string name="time_running">Running Time</string>
+    <string name="time_walking">Walking Time</string>
+    <string name="walking_clock">00:00</string>
+    <string name="init_stop_watch_value">00:00:00</string>
+
+    <string name="hard_volumen">Volumen de Música Cañera</string>
+    <string name="soft_volumen">Volumen de Música Tranqui</string>
+    <string name="notification_volumen">Volumen de Notificaciones</string>
+    <string name="hard_position">00:00:00</string>
+    <string name="hard_duration">01:00:00</string>
+    <string name="soft_position">00:00:00</string>
+    <string name="soft_duration">01:00:00</string>
+
+    <string name="PopUpTotalRuns">Carrera: </string>
+    <string name="PopUpTotalDistance">Kms acumulados: </string>
+    <string name="PopUpTotalTime">Total time: </string>
+    <string name="NoDataWarning">No hay datos registrados. Recuerda activar el GPS si deseas información de tu carrera</string>
+
+    <string name="PopUpDurationTitle">DURACION</string>
+    <string name="PopUpChallengeTitle">OBJETIVO</string>
+    <string name="PopUpIntervalTitle">INTERVALOS</string>
+    <string name="PopUpDistanceTitle">DISTANCIA</string>
+    <string name="PopUpAvgSpeedTitle">VELOCIDAD PROMEDIO</string>
+    <string name="PopUpMaxSpeedTitle">VELOCIDAD MÁXIMA</string>
+    <string name="PopUpUnevennessTitle">DESNIVEL</string>
+
+    <string name="textNull"></string>
+    <string name="textNoData">-</string>
+
+    <string name="medalDistanceDescription">Distancia [Record Personal]</string>
+    <string name="medalAvgSpeedDescription">Vel. Máx. [Record Personal]</string>
+    <string name="medalMaxSpeedDescription">Vel. Prom. [Record Personal]</string>
 </resources>

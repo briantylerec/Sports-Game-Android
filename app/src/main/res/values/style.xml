@@ -6,4 +6,15 @@
         <item name="android:layout_marginHorizontal">16dp</item>
         <item name="android:layout_marginVertical">10dp</item>
     </style>
+
+    <style name="NumberPickerTheme" parent="Theme.AppCompat.Light">
+        <item name="colorAccent">@color/white</item>
+        <!-- To remove divider of the number picker -->
+        <item name="colorControlNormal">@android:color/transparent</item>
+        <!--<item name="colorControlNormal">@color/gray_dark</item>-->
+        <item name="android:textColorPrimary">@color/white</item>
+        <item name="android:background">@color/gray_dark</item>
+        <item name="android:textSize">30sp</item>
+    </style>
+    
 </resources>
