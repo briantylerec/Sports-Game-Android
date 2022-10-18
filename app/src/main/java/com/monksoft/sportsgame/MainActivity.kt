@@ -1,10 +1,12 @@
 package com.monksoft.sportsgame
 
 import android.Manifest
+import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationManager
@@ -42,16 +44,54 @@ import com.monksoft.sportsgame.databinding.ActivityMainBinding
 import me.tankery.lib.circularseekbar.CircularSeekBar
 import me.tankery.lib.circularseekbar.CircularSeekBar.OnCircularSeekBarChangeListener
 import com.google.android.gms.location.LocationRequest.PRIORITY_HIGH_ACCURACY
+import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.GoogleMap
+import com.google.android.gms.maps.OnMapReadyCallback
+import com.google.android.gms.maps.SupportMapFragment
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.PolylineOptions
+import com.google.android.gms.maps.model.RoundCap
+import com.monksoft.sportsgame.Constants.LIMIT_DISTANCE_ACCEPTED_BIKE
+import com.monksoft.sportsgame.Constants.LIMIT_DISTANCE_ACCEPTED_ROLLERSKATE
+import com.monksoft.sportsgame.Constants.LIMIT_DISTANCE_ACCEPTED_RUNNING
+import com.monksoft.sportsgame.Constants.key_challengeAutofinish
+import com.monksoft.sportsgame.Constants.key_challengeDistance
+import com.monksoft.sportsgame.Constants.key_challengeDurationHH
+import com.monksoft.sportsgame.Constants.key_challengeDurationMM
+import com.monksoft.sportsgame.Constants.key_challengeDurationSS
+import com.monksoft.sportsgame.Constants.key_challengeNofify
+import com.monksoft.sportsgame.Constants.key_hardVol
+import com.monksoft.sportsgame.Constants.key_intervalDuration
+import com.monksoft.sportsgame.Constants.key_maxCircularSeekBar
+import com.monksoft.sportsgame.Constants.key_modeChallenge
+import com.monksoft.sportsgame.Constants.key_modeChallengeDistance
+import com.monksoft.sportsgame.Constants.key_modeChallengeDuration
+import com.monksoft.sportsgame.Constants.key_modeInterval
+import com.monksoft.sportsgame.Constants.key_notifyVol
+import com.monksoft.sportsgame.Constants.key_progressCircularSeekBar
+import com.monksoft.sportsgame.Constants.key_provider
+import com.monksoft.sportsgame.Constants.key_runningTime
+import com.monksoft.sportsgame.Constants.key_selectedSport
+import com.monksoft.sportsgame.Constants.key_softVol
+import com.monksoft.sportsgame.Constants.key_userApp
+import com.monksoft.sportsgame.Constants.key_walkingTime
 import com.monksoft.sportsgame.Utility.roundNumber
 
-class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
+class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener,
+    OnMapReadyCallback, GoogleMap.OnMyLocationButtonClickListener,
+    GoogleMap.OnMyLocationClickListener {
 
-    companion object{
+    companion object {
+        lateinit var mainContext: Context
+
         val REQUIRED_PERMISSIONS_GPS =
             arrayOf(
                 Manifest.permission.ACCESS_COARSE_LOCATION,
                 Manifest.permission.ACCESS_FINE_LOCATION)
     }
+
+    private lateinit var sharedPreferences : SharedPreferences
+    private lateinit var editor : SharedPreferences.Editor
 
     private var mHandler: Handler? = null
     private var mInterval = 1000
@@ -115,10 +155,13 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private var ROUND_INTERVAL = 300
     private var TIME_RUNNING: Int = 0
 
+    private lateinit var sportSelected : String
+
     private var activatedGPS: Boolean = true
 
     private lateinit var fusedLocationClient : FusedLocationProviderClient
     private val PERMISSION_ID = 42
+    private val LOCATION_PERMISSION_REQ_CODE = 1000
 
     private var flagSavedLocation = false
     private var hardTime : Boolean = true
@@ -133,18 +176,189 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private var avgSpeed: Double = 0.0
     private var speed: Double = 0.0
 
+    private var minAltitude: Double? = null
+    private var maxAltitude: Double? = null
+    private var minLatitude: Double? = null
+    private var maxLatitude: Double? = null
+    private var minLongitude: Double? = null
+    private var maxLongitude: Double? = null
+
+    private lateinit var listPoints: Iterable<LatLng>
+
+    private var LIMIT_DISTANCE_ACCEPTED: Double = 0.0
+
+    private lateinit var map: GoogleMap
+    private var mapCentered = true
+
     private lateinit var lyPopupRun: LinearLayout
+
+    private lateinit var cbNotify: CheckBox
+    private lateinit var cbAutoFinish: CheckBox
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        mainContext = this
+
         initObjects()
 
         initToolBar()
         initNavigationView()
         initPermissionsGPS()
+    }
+
+    override fun onBackPressed() {
+        //super.onBackPressed()
+        if (drawer.isDrawerOpen(GravityCompat.START))
+            drawer.closeDrawer(GravityCompat.START)
+        else
+            signOut()
+    }
+
+    override fun onMapReady(googleMap: GoogleMap) {
+        map = googleMap
+
+        googleMap.mapType = GoogleMap.MAP_TYPE_HYBRID
+        enableMyLocation()
+
+        map.setOnMyLocationButtonClickListener(this)
+        map.setOnMyLocationClickListener(this)
+        map.setOnMapLongClickListener { mapCentered = false }
+        map.setOnMapClickListener { mapCentered = false }
+
+        manageLocation()
+
+        centerMap(init_lt, init_ln)
+    }
+
+    override fun onMyLocationButtonClick(): Boolean {
+        return false
+    }
+
+    override fun onMyLocationClick(p0: Location) { }
+
+    override fun onRequestPermissionsResult( requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+
+        when(requestCode){
+            LOCATION_PERMISSION_REQ_CODE -> {
+                if(grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)
+                    binding.lyOpenerButton.isEnabled = true
+                else {
+                    if(binding.lyMap.height > 0){
+                        setHeightLinearLayout(binding.lyMap,0)
+                        binding.lyFragmentMap.translationY = -300f
+                        binding.ivOpenClose.rotation = 0f
+                    }
+                    binding.lyOpenerButton.isEnabled = false
+                }
+            }
+        }
+    }
+
+    fun callInflateIntervalMode(v: View){
+        inflateIntervalMode()
+    }
+
+    fun inflateChallenges(v: View){
+        val lyChallengesSpace = findViewById<LinearLayout>(R.id.lyChallengesSpace)
+        val lyChallenges = findViewById<LinearLayout>(R.id.lyChallenges)
+        if (swChallenges.isChecked){
+            animateViewofInt(swChallenges, "textColor", ContextCompat.getColor(this, R.color.orange), 500)
+            setHeightLinearLayout(lyChallengesSpace, 750)
+            animateViewofFloat(lyChallenges, "translationY", 0f, 500)
+        } else {
+            swChallenges.setTextColor(ContextCompat.getColor(this, R.color.white))
+            setHeightLinearLayout(lyChallengesSpace,0)
+            lyChallenges.translationY = -300f
+
+            challengeDistance = 0f
+            challengeDuration = 0
+        }
+    }
+
+    fun showDuration(v: View){
+        showChallenge("duration")
+    }
+
+    fun showDistance(v:View){
+        showChallenge("distance")
+    }
+
+    fun inflateVolumes(v: View){
+        val lySettingsVolumesSpace = findViewById<LinearLayout>(R.id.lySettingsVolumesSpace)
+        val lySettingsVolumes = findViewById<LinearLayout>(R.id.lySettingsVolumes)
+
+        if (swVolumes.isChecked){
+            animateViewofInt(swVolumes, "textColor", ContextCompat.getColor(this, R.color.orange), 500)
+            var swIntervalMode = findViewById<Switch>(R.id.swIntervalMode)
+            var value = 400
+            if (swIntervalMode.isChecked) value = 600
+
+            setHeightLinearLayout(lySettingsVolumesSpace, value)
+            animateViewofFloat(lySettingsVolumes, "translationY", 0f, 500)
+        } else {
+            swVolumes.setTextColor(ContextCompat.getColor(this, R.color.white))
+            setHeightLinearLayout(lySettingsVolumesSpace,0)
+            lySettingsVolumes.translationY = -300f
+        }
+    }
+
+    fun signOff(v: View){
+        signOut()
+    }
+
+    fun startOrStopButtonClicked (v: View){
+        manageStartStop()
+    }
+
+    fun selectBike(v: View){
+        if (timeInSeconds.toInt() == 0) selectSport("Bike")
+    }
+
+    fun selectRollerSkate(v: View){
+        if (timeInSeconds.toInt() == 0) selectSport("RollerSkate")
+    }
+
+    fun selectRunning(v: View){
+        if (timeInSeconds.toInt() == 0) selectSport("Running")
+    }
+
+    fun closePopUp (v: View){
+        closePopUpRun()
+    }
+
+    fun callShowHideMap(v:View){
+        if(allPermissionsGrantedGPS()){
+            if(binding.lyMap.height == 0){
+                setHeightLinearLayout(binding.lyMap, 1157)
+                animateViewofFloat(binding.lyFragmentMap, "translationY", 0f, 0)
+                binding.ivOpenClose.rotation = 180f
+            } else {
+                setHeightLinearLayout(binding.lyMap, 0)
+                binding.lyFragmentMap.translationY = -300f
+                binding.ivOpenClose.rotation = 0f
+            }
+        } else requestPermissionLocation()
+    }
+
+    fun callCenterMap(v:View){
+        mapCentered = true
+        if(latitude == 0.0) centerMap(init_lt, init_ln)
+        else centerMap(latitude, longitude)
+    }
+
+    fun changeTypeMap(v:View){
+        val ivTypeMap = findViewById<ImageView>(R.id.ivTypeMap)
+        if(map.mapType == GoogleMap.MAP_TYPE_HYBRID) {
+            map.mapType = GoogleMap.MAP_TYPE_NONE
+            ivTypeMap.setImageResource(R.drawable.map_type_hybrid)
+        } else {
+            map.mapType = GoogleMap.MAP_TYPE_NONE
+            ivTypeMap.setImageResource(R.drawable.map_type_normal)
+        }
     }
 
     private fun setVolumes(){
@@ -173,9 +387,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun updateTimesTrack(timesH: Boolean, timesS: Boolean){
-        val sbHardTrack = findViewById<SeekBar>(R.id.sbHardTrack)
-        val sbSoftTrack = findViewById<SeekBar>(R.id.sbSoftTrack)
-
         if (timesH){
             val tvHardPosition = findViewById<TextView>(R.id.tvHardPosition)
             val tvHardRemaining = findViewById<TextView>(R.id.tvHardRemaining)
@@ -191,10 +402,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun setProgressTracks(){
-        val sbHardTrack = findViewById<SeekBar>(R.id.sbHardTrack)
-        val sbSoftTrack = findViewById<SeekBar>(R.id.sbSoftTrack)
+//        val sbHardTrack = findViewById<SeekBar>(R.id.sbHardTrack)
+//        val sbSoftTrack = findViewById<SeekBar>(R.id.sbSoftTrack)
         sbHardTrack.max = mpHard!!.duration
         sbSoftTrack.max = mpSoft!!.duration
+        sbHardTrack.isEnabled = false
+        sbSoftTrack.isEnabled = false
         updateTimesTrack(true, true)
 
         sbHardTrack.setOnSeekBarChangeListener(object: SeekBar.OnSeekBarChangeListener{
@@ -203,6 +416,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     mpHard?.pause()
                     mpHard?.seekTo(i)
                     mpHard?.start()
+                    if (!(timeInSeconds > 0L && hardTime && startButtonClicked)) mpHard?.pause()
                     updateTimesTrack(true, false)
                 }
             }
@@ -216,6 +430,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     mpSoft?.pause()
                     mpSoft?.seekTo(i)
                     mpSoft?.start()
+                    if (!(timeInSeconds > 0L && !hardTime && startButtonClicked)) mpSoft?.pause()
                     updateTimesTrack(false, true)
                 }
             }
@@ -235,6 +450,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         sbHardVolume = findViewById(R.id.sbHardVolume)
         sbSoftVolume = findViewById(R.id.sbSoftVolume)
         sbNotifyVolume = findViewById(R.id.sbNotifyVolume)
+
+        sbHardTrack = findViewById(R.id.sbHardTrack)
+        sbSoftTrack = findViewById(R.id.sbSoftTrack)
+
         setVolumes()
         setProgressTracks()
     }
@@ -270,28 +489,17 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun hideLayouts(){
-        val lyMap = findViewById<LinearLayout>(R.id.lyMap)
-        val lyFragmentMap = findViewById<LinearLayout>(R.id.lyFragmentMap)
-        val lyIntervalModeSpace = findViewById<LinearLayout>(R.id.lyIntervalModeSpace)
-        val lyIntervalMode = findViewById<LinearLayout>(R.id.lyIntervalMode)
-        val lyChallengesSpace = findViewById<LinearLayout>(R.id.lyChallengesSpace)
-        val lyChallenges = findViewById<LinearLayout>(R.id.lyChallenges)
-        val lySettingsVolumesSpace = findViewById<LinearLayout>(R.id.lySettingsVolumesSpace)
-        val lySettingsVolumes = findViewById<LinearLayout>(R.id.lySettingsVolumes)
-        val lySoftTrack = findViewById<LinearLayout>(R.id.lySoftTrack)
-        val lySoftVolume = findViewById<LinearLayout>(R.id.lySoftVolume)
+        setHeightLinearLayout(binding.lyMap, 0)
+        setHeightLinearLayout(binding.lyIntervalModeSpace,0)
+        setHeightLinearLayout(binding.lyChallengesSpace,0)
+        setHeightLinearLayout(binding.lySettingsVolumesSpace,0)
+        setHeightLinearLayout(binding.lySoftTrack,0)
+        setHeightLinearLayout(binding.lySoftVolume,0)
 
-        setHeightLinearLayout(lyMap, 0)
-        setHeightLinearLayout(lyIntervalModeSpace,0)
-        setHeightLinearLayout(lyChallengesSpace,0)
-        setHeightLinearLayout(lySettingsVolumesSpace,0)
-        setHeightLinearLayout(lySoftTrack,0)
-        setHeightLinearLayout(lySoftVolume,0)
-
-        lyFragmentMap.translationY = -300f
-        lyIntervalMode.translationY = -300f
-        lyChallenges.translationY = -300f
-        lySettingsVolumes.translationY = -300f
+        binding.lyFragmentMap.translationY = -300f
+        binding.lyIntervalMode.translationY = -300f
+        binding.lyChallenges.translationY = -300f
+        binding.lySettingsVolumes.translationY = -300f
     }
 
     private fun initMetrics(){
@@ -445,22 +653,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         npChallengeDurationSS.setOnValueChangedListener { picker, oldVal, newVal ->
             getChallengeDuration(npChallengeDurationHH.value, npChallengeDurationMM.value, newVal)
         }
-    }
 
-    private fun hidePopUpRun(){
-        val lyWindow = findViewById<LinearLayout>(R.id.lyWindow)
-        lyWindow.translationX = 400f
-        lyPopupRun = findViewById(R.id.lyPopupRun)
-        lyPopupRun.isVisible = false
+        cbNotify = findViewById<CheckBox>(R.id.cbNotify)
+        cbAutoFinish = findViewById<CheckBox>(R.id.cbAutoFinish)
     }
-
-    override fun onBackPressed() {
-	    //super.onBackPressed()
-	    if (drawer.isDrawerOpen(GravityCompat.START))
-		drawer.closeDrawer(GravityCompat.START)
-	    else
-		signOut()
-	}
 
     private fun initObjects(){
         initChrono()
@@ -471,13 +667,116 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         initChallengeMode()
         initMusic()
         hidePopUpRun()
+        initMap()
+        initPreferences()
+        recoveryPreferences()
     }
 
-    fun callInflateIntervalMode(v: View){
-        inflateIntervalMode()
+    private fun initPreferences() {
+        sharedPreferences = getSharedPreferences("sharedPref", MODE_PRIVATE)
+        editor = sharedPreferences.edit()
     }
 
-    fun inflateIntervalMode(){
+    private fun savePreferences(){
+        editor.clear()
+        editor.apply{
+
+            putString(key_userApp, userEmail)
+            putString(key_provider, providerSession)
+
+            putString(key_selectedSport, sportSelected)
+
+            putBoolean(key_modeInterval, swIntervalMode.isChecked)
+            putInt(key_intervalDuration, npDurationInterval.value)
+            putFloat(key_progressCircularSeekBar, csbRunWalk.progress)
+            putFloat(key_maxCircularSeekBar, csbRunWalk.max)
+            putString(key_runningTime, tvRunningTime.text.toString())
+            putString(key_walkingTime, tvWalkingTime.text.toString())
+
+            putBoolean(key_modeChallenge, swChallenges.isChecked)
+            putBoolean(key_modeChallengeDuration, !(challengeDuration == 0))
+            putInt(key_challengeDurationHH, npChallengeDurationHH.value)
+            putInt(key_challengeDurationMM, npChallengeDurationMM.value)
+            putInt(key_challengeDurationSS, npChallengeDurationSS.value)
+            putBoolean(key_modeChallengeDistance, !(challengeDistance == 0f))
+            putInt(key_challengeDistance, npChallengeDistance.value)
+
+            putBoolean(key_challengeNofify, cbNotify.isChecked)
+            putBoolean(key_challengeAutofinish, cbAutoFinish.isChecked)
+
+            putInt(key_hardVol, sbHardVolume.progress)
+            putInt(key_softVol, sbSoftVolume.progress)
+            putInt(key_notifyVol, sbNotifyVolume.progress)
+
+        }.apply()
+    }
+
+    private fun alertClearPreferences(){
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.alertClearPreferencesTitle))
+            .setMessage(getString(R.string.alertClearPreferencesDescription))
+            .setPositiveButton(android.R.string.ok,
+                DialogInterface.OnClickListener{dialgo, which ->
+                    callClearPreferences()
+                })
+            .setNegativeButton(android.R.string.cancel,
+                DialogInterface.OnClickListener{dialgo, which ->
+
+                })
+            .setCancelable(true)
+            .show()
+    }
+
+    private fun callClearPreferences(){
+        editor.clear().apply()
+        Toast.makeText(this, "Tus ajustes han sido reestablecidos :)", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun recoveryPreferences(){
+        if (sharedPreferences.getString(key_userApp, "null") == userEmail){
+            sportSelected = sharedPreferences.getString(key_selectedSport, "Running").toString()
+
+            swIntervalMode.isChecked = sharedPreferences.getBoolean(key_modeInterval, false)
+            if (swIntervalMode.isChecked){
+                npDurationInterval.value = sharedPreferences.getInt(key_intervalDuration, 5)
+                ROUND_INTERVAL = npDurationInterval.value*60
+                csbRunWalk.progress = sharedPreferences.getFloat(key_progressCircularSeekBar, 150.0f)
+                csbRunWalk.max = sharedPreferences.getFloat(key_maxCircularSeekBar, 300.0f)
+                tvRunningTime.text = sharedPreferences.getString(key_runningTime, "2:30")
+                tvWalkingTime.text = sharedPreferences.getString(key_walkingTime, "2:30")
+                swIntervalMode.callOnClick()
+            }
+
+            swChallenges.isChecked = sharedPreferences.getBoolean(key_modeChallenge, false)
+            if (swChallenges.isChecked){
+                swChallenges.callOnClick()
+                if (sharedPreferences.getBoolean(key_modeChallengeDuration, false)){
+                    npChallengeDurationHH.value = sharedPreferences.getInt(key_challengeDurationHH, 1)
+                    npChallengeDurationMM.value = sharedPreferences.getInt(key_challengeDurationMM, 0)
+                    npChallengeDurationSS.value = sharedPreferences.getInt(key_challengeDurationSS, 0)
+                    getChallengeDuration(npChallengeDurationHH.value,npChallengeDurationMM.value,npChallengeDurationSS.value)
+                    challengeDistance = 0f
+
+                    showChallenge("duration")
+                }
+                if (sharedPreferences.getBoolean(key_modeChallengeDistance, false)){
+                    npChallengeDistance.value = sharedPreferences.getInt(key_challengeDistance, 10)
+                    challengeDistance = npChallengeDistance.value.toFloat()
+                    challengeDuration = 0
+
+                    showChallenge("distance")
+                }
+            }
+            cbNotify.isChecked = sharedPreferences.getBoolean(key_challengeNofify, true)
+            cbAutoFinish.isChecked = sharedPreferences.getBoolean(key_challengeAutofinish, false)
+
+            sbHardVolume.progress = sharedPreferences.getInt(key_hardVol, 100)
+            sbSoftVolume.progress = sharedPreferences.getInt(key_softVol, 100)
+            sbNotifyVolume.progress = sharedPreferences.getInt(key_notifyVol, 100)
+        }
+    }
+
+    private fun inflateIntervalMode(){
         val lyIntervalMode = findViewById<LinearLayout>(R.id.lyIntervalMode)
         val lyIntervalModeSpace = findViewById<LinearLayout>(R.id.lyIntervalModeSpace)
         val lySoftTrack = findViewById<LinearLayout>(R.id.lySoftTrack)
@@ -516,32 +815,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             }
         }
     }
-
-    fun inflateChallenges(v: View){
-        val lyChallengesSpace = findViewById<LinearLayout>(R.id.lyChallengesSpace)
-        val lyChallenges = findViewById<LinearLayout>(R.id.lyChallenges)
-        if (swChallenges.isChecked){
-            animateViewofInt(swChallenges, "textColor", ContextCompat.getColor(this, R.color.orange), 500)
-            setHeightLinearLayout(lyChallengesSpace, 750)
-            animateViewofFloat(lyChallenges, "translationY", 0f, 500)
-        } else {
-            swChallenges.setTextColor(ContextCompat.getColor(this, R.color.white))
-            setHeightLinearLayout(lyChallengesSpace,0)
-            lyChallenges.translationY = -300f
-
-            challengeDistance = 0f
-            challengeDuration = 0
-        }
-    }
-
-    fun showDuration(v: View){
-        showChallenge("duration")
-    }
-
-    fun showDistance(v:View){
-        showChallenge("distance")
-    }
-
+    
     private fun showChallenge(option: String){
         val lyChallengeDuration = findViewById<LinearLayout>(R.id.lyChallengeDuration)
         val lyChallengeDistance = findViewById<LinearLayout>(R.id.lyChallengeDistance)
@@ -589,25 +863,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         challengeDuration = getSecFromWatch("${hours}:${minutes}:${seconds}")
     }
 
-    fun inflateVolumes(v: View){
-        val lySettingsVolumesSpace = findViewById<LinearLayout>(R.id.lySettingsVolumesSpace)
-        val lySettingsVolumes = findViewById<LinearLayout>(R.id.lySettingsVolumes)
-
-        if (swVolumes.isChecked){
-            animateViewofInt(swVolumes, "textColor", ContextCompat.getColor(this, R.color.orange), 500)
-            var swIntervalMode = findViewById<Switch>(R.id.swIntervalMode)
-            var value = 400
-            if (swIntervalMode.isChecked) value = 600
-
-            setHeightLinearLayout(lySettingsVolumesSpace, value)
-            animateViewofFloat(lySettingsVolumes, "translationY", 0f, 500)
-        } else {
-            swVolumes.setTextColor(ContextCompat.getColor(this, R.color.white))
-            setHeightLinearLayout(lySettingsVolumesSpace,0)
-            lySettingsVolumes.translationY = -300f
-        }
-    }
-
     private fun initNavigationView() {
         val navigationView : NavigationView = findViewById(R.id.nav_view)
         navigationView.setNavigationItemSelectedListener(this)
@@ -634,20 +889,17 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         toggle.syncState()
     }
 
-    fun signOff(v: View){
-        signOut()
-    }
-
     private fun signOut(){
         userEmail = ""
         if(providerSession == "facebook") LoginManager.getInstance().logOut()
         FirebaseAuth.getInstance().signOut()
-        startActivity(Intent(this, LoginActivity::class. java))
+        startActivity(Intent(this, LoginActivity::class.java))
     }
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
         when(item.itemId){
             R.id.nav_item_record -> callRecordActivity()
+            R.id.nav_item_clearpreferences -> alertClearPreferences()
             R.id.nav_item_signout -> signOut()
         }
         drawer.closeDrawer(GravityCompat.START)
@@ -658,15 +910,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         startActivity(Intent(this, RecordActivity::class.java))
     }
 
-    fun startOrStopButtonClicked (v: View){
-        manageStartStop()
-    }
-
     private fun requestPermissionLocation(){
         ActivityCompat.requestPermissions(this, arrayOf(
             Manifest.permission.ACCESS_COARSE_LOCATION,
             Manifest.permission.ACCESS_FINE_LOCATION), PERMISSION_ID)
     }
+
     private fun allPermissionsGrantedGPS() = REQUIRED_PERMISSIONS_GPS.all {
         ContextCompat.checkSelfPermission(baseContext, it) == PackageManager.PERMISSION_GRANTED
     }
@@ -724,7 +973,17 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
             tvChrono.setTextColor(ContextCompat.getColor(this, R.color.chrono_running))
 
+            sbHardTrack.isEnabled = true
+            sbSoftTrack.isEnabled = true
+
             mpHard?.start()
+
+            if (activatedGPS){
+                flagSavedLocation = false
+                manageLocation()
+                flagSavedLocation = true
+                manageLocation()
+            }
         }
 
         if (!startButtonClicked){
@@ -732,20 +991,26 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             startTime()
             manageEnableButtonsRun(false, true)
 
-            if (tvChrono.currentTextColor == ContextCompat.getColor(this, R.color.chrono_running))
-                mpHard?.start()
-            if (tvChrono.currentTextColor == ContextCompat.getColor(this, R.color.chrono_walking))
-                mpSoft?.start()
+            if (hardTime) mpHard?.start()
+            else mpSoft?.start()
+
+//            if (tvChrono.currentTextColor == ContextCompat.getColor(this, R.color.chrono_running))
+//                mpHard?.start()
+//            if (tvChrono.currentTextColor == ContextCompat.getColor(this, R.color.chrono_walking))
+//                mpSoft?.start()
 
         } else {
             startButtonClicked = false
             stopTime()
             manageEnableButtonsRun(true, true)
 
-            if (tvChrono.currentTextColor == ContextCompat.getColor(this, R.color.chrono_running))
-                mpHard?.pause()
-            if (tvChrono.currentTextColor == ContextCompat.getColor(this, R.color.chrono_walking))
-                mpSoft?.pause()
+            if (hardTime) mpHard?.pause()
+            else mpSoft?.pause()
+
+//            if (tvChrono.currentTextColor == ContextCompat.getColor(this, R.color.chrono_running))
+//                mpHard?.pause()
+//            if (tvChrono.currentTextColor == ContextCompat.getColor(this, R.color.chrono_walking))
+//                mpSoft?.pause()
         }
     }
 
@@ -798,7 +1063,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
                 updateTimesTrack(true, true)
 
-                if(activatedGPS && timeInSeconds.toInt() % INTERVAL_LOCATION == 0) manageLocation()
+                if (activatedGPS && timeInSeconds.toInt() % INTERVAL_LOCATION == 0) manageLocation()
 
                 if (swIntervalMode.isChecked){
                     checkStopRun(timeInSeconds)
@@ -848,7 +1113,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     private val mLocationCallBack = object: LocationCallback(){
         override fun onLocationResult(locationResult: LocationResult) {
-            var mLastLocation : Location = locationResult.lastLocation
+            val mLastLocation : Location = locationResult.lastLocation
 
             init_lt = mLastLocation.latitude
             init_ln = mLastLocation.longitude
@@ -856,20 +1121,59 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             if (timeInSeconds > 0L) registerNewLocation(mLastLocation)
         }
     }
+
     private fun registerNewLocation(location: Location){
         val new_latitude: Double = location.latitude
         val new_longitude: Double = location.longitude
 
         if (flagSavedLocation){
             if (timeInSeconds >= INTERVAL_LOCATION){
-                var distanceInterval = calculateDistance(new_latitude, new_longitude)
+                val distanceInterval = calculateDistance(new_latitude, new_longitude)
 
-                updateSpeeds(distanceInterval)
-                refreshInterfaceData()
+                if ( distanceInterval <= LIMIT_DISTANCE_ACCEPTED){
+                    updateSpeeds(distanceInterval)
+                    refreshInterfaceData()
+
+                    val newPos = LatLng (new_latitude, new_longitude)
+                    (listPoints as ArrayList<LatLng>).add(newPos)
+                    createPolylines(listPoints)
+                }
             }
         }
         latitude = new_latitude
         longitude = new_longitude
+
+        if (mapCentered) centerMap(latitude, longitude)
+
+        if (minLatitude == null){
+            minLatitude = latitude
+            maxLatitude = latitude
+            minLongitude = longitude
+            maxLongitude = longitude
+        }
+        if (latitude < minLatitude!!) minLatitude = latitude
+        if (latitude > maxLatitude!!) maxLatitude = latitude
+        if (longitude < minLongitude!!) minLongitude = longitude
+        if (longitude > maxLongitude!!) maxLongitude = longitude
+
+        if (location.hasAltitude()){
+            if (maxAltitude == null){
+                maxAltitude = location.altitude
+                minAltitude = location.altitude
+            }
+            if (location.latitude > maxAltitude!!) maxAltitude = location.altitude
+            if (location.latitude < minAltitude!!) minAltitude = location.altitude
+        }
+    }
+
+    private fun createPolylines(listPosition: Iterable<LatLng>){
+        val polylineOptions = PolylineOptions()
+            .width(25f)
+            .color(ContextCompat.getColor(this, R.color.salmon_dark))
+            .addAll(listPosition)
+
+        val polyline = map.addPolyline(polylineOptions)
+        polyline.startCap = RoundCap()
     }
 
     private fun calculateDistance(n_lt: Double, n_lg: Double): Double{
@@ -885,12 +1189,45 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 Math.toRadians( n_lt  )
             ))
         val va2 = 2 * Math.atan2(Math.sqrt(va1), Math.sqrt(1 - va1))
-        var n_distance =  radioTierra * va2
+        val n_distance =  radioTierra * va2
 
-        //if (n_distance < LIMIT_DISTANCE_ACCEPTED) distance += n_distance
+        if (n_distance < LIMIT_DISTANCE_ACCEPTED) distance += n_distance
 
         distance += n_distance
         return n_distance
+    }
+
+    private fun selectSport(sport: String){
+
+        sportSelected = sport
+
+        val lySportBike = findViewById<LinearLayout>(R.id.lySportBike)
+        val lySportRollerSkate = findViewById<LinearLayout>(R.id.lySportRollerSkate)
+        val lySportRunning = findViewById<LinearLayout>(R.id.lySportRunning)
+
+        when (sport){
+            "Bike"->{
+                LIMIT_DISTANCE_ACCEPTED = LIMIT_DISTANCE_ACCEPTED_BIKE
+
+                lySportBike.setBackgroundColor(ContextCompat.getColor(mainContext, R.color.orange))
+                lySportRollerSkate.setBackgroundColor(ContextCompat.getColor(mainContext, R.color.gray_medium))
+                lySportRunning.setBackgroundColor(ContextCompat.getColor(mainContext, R.color.gray_medium))
+            }
+            "RollerSkate"->{
+                LIMIT_DISTANCE_ACCEPTED = LIMIT_DISTANCE_ACCEPTED_ROLLERSKATE
+
+                lySportBike.setBackgroundColor(ContextCompat.getColor(mainContext, R.color.gray_medium))
+                lySportRollerSkate.setBackgroundColor(ContextCompat.getColor(mainContext, R.color.orange))
+                lySportRunning.setBackgroundColor(ContextCompat.getColor(mainContext, R.color.gray_medium))
+            }
+            "Running"->{
+                LIMIT_DISTANCE_ACCEPTED = LIMIT_DISTANCE_ACCEPTED_RUNNING
+
+                lySportBike.setBackgroundColor(ContextCompat.getColor(mainContext, R.color.gray_medium))
+                lySportRollerSkate.setBackgroundColor(ContextCompat.getColor(mainContext, R.color.gray_medium))
+                lySportRunning.setBackgroundColor(ContextCompat.getColor(mainContext, R.color.orange))
+            }
+        }
     }
 
     private fun updateSpeeds(d: Double) {
@@ -902,9 +1239,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun refreshInterfaceData(){
-        var tvCurrentDistance = findViewById<TextView>(R.id.tvCurrentDistance)
-        var tvCurrentAvgSpeed = findViewById<TextView>(R.id.tvCurrentAvgSpeed)
-        var tvCurrentSpeed = findViewById<TextView>(R.id.tvCurrentSpeed)
+        val tvCurrentDistance = findViewById<TextView>(R.id.tvCurrentDistance)
+        val tvCurrentAvgSpeed = findViewById<TextView>(R.id.tvCurrentAvgSpeed)
+        val tvCurrentSpeed = findViewById<TextView>(R.id.tvCurrentSpeed)
         tvCurrentDistance.text = roundNumber(distance.toString(), 2)
         tvCurrentAvgSpeed.text = roundNumber(avgSpeed.toString(), 1)
         tvCurrentSpeed.text = roundNumber(speed.toString(), 1)
@@ -926,7 +1263,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun resetClicked(){
-        resetVariablesRun()
+        savePreferences()
+        showPopUp()
         resetTimeView()
         resetInterface()
     }
@@ -936,16 +1274,31 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         rounds = 1
         hardTime = true
 
+        distance = 0.0
+        maxSpeed = 0.0
+        avgSpeed = 0.0
+
+        minAltitude = null
+        maxAltitude = null
+        minLatitude = null
+        maxLatitude = null
+        minLongitude = null
+        maxLongitude = null
+
+        (listPoints as ArrayList<LatLng>).clear()
+
         challengeDistance = 0f
         challengeDuration = 0
 
         activatedGPS = true
         flagSavedLocation = false
 
-        initStopWatch()
+        //initStopWatch()
     }
 
     private fun resetTimeView(){
+
+        initStopWatch()
         manageEnableButtonsRun(false, true)
 
         //val btStart: LinearLayout = findViewById(R.id.btStart)
@@ -1049,5 +1402,114 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             notifySound()
             mpHard?.start()
         } else updateProgressBarRound(Secs)
+    }
+
+    private fun enableMyLocation(){
+        if(!::map.isInitialized) return
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED ) {
+            requestPermissionLocation()
+            return
+        } else map.isMyLocationEnabled = true
+    }
+
+    private fun centerMap(lt: Double, ln: Double) {
+        val posMap = LatLng(lt, ln)
+        map.animateCamera(CameraUpdateFactory.newLatLngZoom(posMap, 16f), 1000, null)
+    }
+
+    private fun initMap(){
+        listPoints = arrayListOf()
+        (listPoints as ArrayList<LatLng>).clear()
+        createMapFragment()
+        binding.lyOpenerButton.isEnabled = allPermissionsGrantedGPS()
+    }
+
+    private fun createMapFragment(){
+        val mapFragment = supportFragmentManager.findFragmentById(R.id.fragmentMap) as SupportMapFragment?
+        mapFragment?.getMapAsync(this)
+    }
+
+    private fun showPopUp(){
+        val rlMain = findViewById<RelativeLayout>(R.id.rlMain)
+        rlMain.isEnabled = false
+
+        lyPopupRun.isVisible = true
+
+        val lyWindow = findViewById<LinearLayout>(R.id.lyWindow)
+        ObjectAnimator.ofFloat(lyWindow, "translationX", 0f ).apply {
+            duration = 200L
+            start()
+        }
+        loadDataPopUp()
+    }
+
+    private fun loadDataPopUp(){
+        showHeaderPopUp()
+        showMedals()
+        showDataRun()
+    }
+
+    private fun showHeaderPopUp(){
+
+    }
+
+    private fun showMedals(){
+
+    }
+
+    private fun showDataRun(){
+
+        binding.tvDurationRun.text = tvChrono.text
+
+        if (challengeDuration > 0){
+
+            setHeightLinearLayout(binding.lyChallengeDurationRun, 120)
+            binding.tvChallengeDurationRun.text = getFormattedStopWatch((challengeDuration*1000).toLong())
+
+        } else setHeightLinearLayout(binding.lyChallengeDurationRun, 0)
+
+        if (swIntervalMode.isChecked){
+
+            setHeightLinearLayout(binding.lyIntervalRun, 120)
+            binding.tvIntervalRun.text = "${npDurationInterval.value}mins. (${tvRunningTime.text} / ${tvWalkingTime.text})"
+
+        } else setHeightLinearLayout(binding.lyIntervalRun, 0)
+
+
+        binding.tvDistanceRun.text = roundNumber(distance.toString(), 2)
+
+        if (challengeDistance > 0f){
+
+            setHeightLinearLayout(binding.lyChallengeDistancePopUp, 120)
+            binding.tvChallengeDistanceRun.text = challengeDistance.toString()
+
+        } else setHeightLinearLayout(binding.lyChallengeDistancePopUp, 0)
+
+        if (maxAltitude == null) setHeightLinearLayout(binding.lyUnevennessRun, 0)
+        else {
+            setHeightLinearLayout(binding.lyUnevennessRun, 120)
+            binding.tvMaxUnevennessRun.text = maxAltitude!!.toInt().toString()
+            binding.tvMinUnevennessRun.text = minAltitude!!.toInt().toString()
+        }
+
+        binding.tvAvgSpeedRun.text = roundNumber(avgSpeed.toString(), 1)
+        binding.tvMaxSpeedRun.text = roundNumber(maxSpeed.toString(), 1)
+    }
+
+    private fun closePopUpRun(){
+        hidePopUpRun()
+        val rlMain = findViewById<RelativeLayout>(R.id.rlMain)
+        rlMain.isEnabled = true
+
+        resetVariablesRun()
+    }
+
+    private fun hidePopUpRun(){
+        val lyWindow = findViewById<LinearLayout>(R.id.lyWindow)
+        lyWindow.translationX = 400f
+        lyPopupRun = findViewById(R.id.lyPopupRun)
+        lyPopupRun.isVisible = false
     }
 }
