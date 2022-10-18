@@ -790,7 +790,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 sportsLoaded++
                 setLevelSport(sport)
                 if (sportsLoaded == 3) selectSport(sportSelected)
-
             }
             .addOnFailureListener { exception ->
                 Log.d("ERROR loadTotalsUser", "get failed with ", exception)
@@ -1538,6 +1537,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 lySportBike.setBackgroundColor(ContextCompat.getColor(mainContext, R.color.orange))
                 lySportRollerSkate.setBackgroundColor(ContextCompat.getColor(mainContext, R.color.gray_medium))
                 lySportRunning.setBackgroundColor(ContextCompat.getColor(mainContext, R.color.gray_medium))
+
+                levelSelectedSport = levelBike
+                totalsSelectedSport = totalsBike
             }
             "RollerSkate"->{
                 LIMIT_DISTANCE_ACCEPTED = LIMIT_DISTANCE_ACCEPTED_ROLLERSKATE
@@ -1545,6 +1547,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 lySportBike.setBackgroundColor(ContextCompat.getColor(mainContext, R.color.gray_medium))
                 lySportRollerSkate.setBackgroundColor(ContextCompat.getColor(mainContext, R.color.orange))
                 lySportRunning.setBackgroundColor(ContextCompat.getColor(mainContext, R.color.gray_medium))
+
+                levelSelectedSport = levelRollerSkate
+                totalsSelectedSport = totalsRollerSkate
             }
             "Running"->{
                 LIMIT_DISTANCE_ACCEPTED = LIMIT_DISTANCE_ACCEPTED_RUNNING
@@ -1552,6 +1557,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 lySportBike.setBackgroundColor(ContextCompat.getColor(mainContext, R.color.gray_medium))
                 lySportRollerSkate.setBackgroundColor(ContextCompat.getColor(mainContext, R.color.gray_medium))
                 lySportRunning.setBackgroundColor(ContextCompat.getColor(mainContext, R.color.orange))
+
+                levelSelectedSport = levelRunning
+                totalsSelectedSport = totalsRunning
             }
         }
 
@@ -1844,7 +1852,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun showHeaderPopUp(){
-
         when (sportSelected){
             "Bike" ->{
                 levelSelectedSport = levelBike
@@ -1903,7 +1910,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             "level_7" -> binding.ivCurrentLevel.setImageResource(R.drawable.level_7)
         }
 
-        var formatedTime = getFormattedTotalTime(totalsSelectedSport.totalTime!!.toLong())
+        val formatedTime = getFormattedTotalTime(totalsSelectedSport.totalTime!!.toLong())
         binding.tvTotalTime.text = getString(R.string.PopUpTotalTime) + formatedTime
     }
 
