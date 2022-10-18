@@ -64,4 +64,30 @@ object Utility {
 
         return d
     }
+
+    fun getFormattedTotalTime(secs: Long): String {
+        var seconds: Long = secs
+        var total: String =""
+
+        //1 dia = 86400s
+        //1 mes (30 dias) = 2592000s
+        //365 dias = 31536000s
+
+        var years: Int = 0
+        while (seconds >=  31536000) { years++; seconds-=31536000; }
+
+        var months: Int = 0
+        while (seconds >=  2592000) { months++; seconds-=2592000; }
+
+        var days: Int = 0
+        while (seconds >=  86400) { days++; seconds-=86400; }
+
+        if (years > 0) total += "${years}y "
+        if (months > 0) total += "${months}m "
+        if (days > 0) total += "${days}d "
+
+        total += getFormattedStopWatch(seconds*1000)
+
+        return total
+    }
 }
