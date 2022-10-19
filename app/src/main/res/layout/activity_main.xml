@@ -11,7 +11,7 @@
     tools:openDrawer="start">
 
     <include
-        layout="@layout/app_bar_name"
+        layout="@layout/app_bar_main"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"/>
 
@@ -645,7 +645,7 @@
                             android:layout_alignParentBottom="true"
                             android:layout_centerInParent="true"
                             android:backgroundTint="@color/white"
-                            android:src="@drawable/close_icon"
+                            android:src="@android:drawable/ic_menu_camera"
                             app:maxImageSize="40dp"
                             android:translationZ="12dp"
                             android:translationX="75dp"
@@ -1367,12 +1367,12 @@
 
     <LinearLayout
         android:id="@+id/lyPopupRun"
-        android:visibility="invisible"
+        android:visibility="visible"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
         android:gravity="center|center"
-        android:background="@color/gray_light_trans">
+        android:background="@color/gray_light_trans">>
 
         <!--
     android:translationX="400dp"
@@ -1449,6 +1449,9 @@
                                 android:textStyle="bold"/>
 
                         </LinearLayout>
+
+
+
                     </LinearLayout>
                 </LinearLayout>
                 <LinearLayout
@@ -1858,9 +1861,10 @@
 
                                     </LinearLayout>
                                 </LinearLayout>
+
+
                             </LinearLayout>
                         </LinearLayout>
-
                         <LinearLayout
                             android:id="@+id/lyCurrentSpeeds"
                             android:layout_width="170dp"
@@ -1958,7 +1962,6 @@
                         </LinearLayout>
                     </LinearLayout>
                 </LinearLayout>
-
                 <RelativeLayout
                     android:id="@+id/lyCurrentLevel"
                     android:layout_width="230dp"
@@ -1967,7 +1970,6 @@
                     android:layout_marginLeft="0dp"
                     android:orientation="horizontal"
                     android:gravity="center">
-
                     <androidx.cardview.widget.CardView
                         android:id="@+id/cvLevel"
                         android:layout_width="150dp"
@@ -2065,8 +2067,9 @@
                             android:textColor="@color/gray_medium"
                             android:textSize="12sp"
                             android:layout_marginTop="120dp"/>
-                    </androidx.cardview.widget.CardView>
 
+
+                    </androidx.cardview.widget.CardView>
                     <TextView
                         android:id="@+id/tvNumberLevel"
                         android:layout_width="70dp"
@@ -2090,8 +2093,10 @@
                         android:layout_marginLeft="5dp"
                         android:src="@drawable/level_1"
                         android:translationZ="10dp"/>
+
                 </RelativeLayout>
             </RelativeLayout>
+
 
             <LinearLayout
                 android:id="@+id/lyPopUpOptionsRun"
@@ -2124,7 +2129,7 @@
                     android:layout_height="wrap_content"
                     android:layout_margin="10dp"
                     android:backgroundTint="@color/white"
-                    android:src="@drawable/close_icon"
+                    android:src="@android:drawable/ic_menu_camera"
                     app:maxImageSize="40dp"
                     android:onClick="takePicture"/>
                 <com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -2133,10 +2138,14 @@
                     android:layout_height="wrap_content"
                     android:layout_margin="10dp"
                     android:backgroundTint="@color/white"
-                    android:src="@drawable/close_icon"
+                    android:src="@android:drawable/ic_menu_share"
                     app:maxImageSize="40dp"
                     android:onClick="shareRun"/>
             </LinearLayout>
         </LinearLayout>
     </LinearLayout>
+
+
+
+
 </androidx.drawerlayout.widget.DrawerLayout>

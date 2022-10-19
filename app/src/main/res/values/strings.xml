@@ -103,4 +103,7 @@
 
     <string name="alertClearPreferencesTitle">¿Quieres borrar tus preferencias de carrera?</string>
     <string name="alertClearPreferencesDescription">Borraremos los ajustes de volumen y carrera (modo y tiempo de intervalos) de tu útlima carrera, vamos que tampoco pasa na</string>
+
+    <string name="alertSignOutTitle">¿Quieres cerrar sesión?</string>
+    <string name="alertSignOutTDescription">Puedes volver cuando lo desees :)</string>
 </resources>
