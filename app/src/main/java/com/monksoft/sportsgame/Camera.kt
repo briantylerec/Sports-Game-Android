@@ -171,12 +171,11 @@ class Camera : AppCompatActivity() {
     }
 
     private fun manageSwitchButton(){
-        val switchButton = binding.cameraSwitchButton
         try {
-            switchButton.isEnabled = hasBackCamera() && hasFrontCamera()
+            binding.cameraSwitchButton.isEnabled = hasBackCamera() && hasFrontCamera()
 
         } catch (exc: CameraInfoUnavailableException){
-            switchButton.isEnabled = false
+            binding.cameraSwitchButton.isEnabled = false
         }
     }
 
@@ -212,9 +211,7 @@ class Camera : AppCompatActivity() {
                         baseContext,
                         arrayOf(savedUri.toFile().absolutePath),
                         arrayOf(mimeType)
-                    ){ _, uri ->
-
-                    }
+                    ){ _, _ -> }
 
                     val clMain = findViewById<ConstraintLayout>(R.id.clMain)
                     Snackbar.make(clMain, "Imagen guardada con éxito", Snackbar.LENGTH_LONG).setAction("OK"){
