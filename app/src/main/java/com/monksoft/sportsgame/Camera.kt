@@ -3,7 +3,6 @@ package com.monksoft.sportsgame
 import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Color
-import android.media.Image
 import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Build
@@ -37,7 +36,7 @@ class Camera : AppCompatActivity() {
 
     companion object{
         private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
-        private const val REQUEST_CODE_PERMISSIONS = 10
+        private val REQUEST_CODE_PERMISSIONS = 10
 
         private const val RATIO_4_3_VALUE = 4.0 / 3.0
         private const val RATIO_16_9_VALUE = 16.0 / 9.0
@@ -58,6 +57,8 @@ class Camera : AppCompatActivity() {
 
     private lateinit var dateRun: String
     private lateinit var startTimeRun: String
+
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -85,6 +86,7 @@ class Camera : AppCompatActivity() {
 
         if (allPermissionsGranted()) startCamera()
         else ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS)
+
     }
 
     override fun onRequestPermissionsResult(requestCode: Int,permissions: Array<out String>,grantResults: IntArray) {
@@ -98,10 +100,10 @@ class Camera : AppCompatActivity() {
             }
         }
     }
-
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all{
         ContextCompat.checkSelfPermission(baseContext, it) == PackageManager.PERMISSION_GRANTED
     }
+
 
     private fun bindCamera(){
 
@@ -132,8 +134,9 @@ class Camera : AppCompatActivity() {
         }catch(exc: Exception){
             Log.e("CameraWildRunning", "Fallo al vincular la camara", exc)
         }
-    }
 
+
+    }
     private fun aspectRadio(width: Int, height: Int): Int{
         val previewRatio = max(width, height).toDouble() / min(width, height)
 
@@ -141,8 +144,9 @@ class Camera : AppCompatActivity() {
             return AspectRatio.RATIO_4_3
         }
         return AspectRatio.RATIO_16_9
-    }
 
+
+    }
     private fun startCamera(){
         val cameraProviderFinnaly = ProcessCameraProvider.getInstance(this)
         cameraProviderFinnaly.addListener(Runnable {
@@ -160,32 +164,35 @@ class Camera : AppCompatActivity() {
             bindCamera()
 
         }, ContextCompat.getMainExecutor(this))
+
+
     }
 
     private fun hasBackCamera(): Boolean{
         return cameraProvider?.hasCamera(CameraSelector.DEFAULT_BACK_CAMERA) ?: false
     }
-
     private fun hasFrontCamera(): Boolean{
         return cameraProvider?.hasCamera(CameraSelector.DEFAULT_FRONT_CAMERA) ?: false
     }
-
     private fun manageSwitchButton(){
+        val switchButton = binding.cameraSwitchButton
         try {
-            binding.cameraSwitchButton.isEnabled = hasBackCamera() && hasFrontCamera()
+            switchButton.isEnabled = hasBackCamera() && hasFrontCamera()
 
-        } catch (exc: CameraInfoUnavailableException){
-            binding.cameraSwitchButton.isEnabled = false
+        }catch (exc: CameraInfoUnavailableException){
+            switchButton.isEnabled = false
         }
+
     }
+
 
     private fun getOutputDirectory(): File{
         val mediaDir = externalMediaDirs.firstOrNull()?.let{
             File(it, "wildRunning").apply {  mkdirs() }
         }
         return if (mediaDir != null && mediaDir.exists()) mediaDir else filesDir
-    }
 
+    }
     private fun takePhoto(){
         FILENAME = getString(R.string.app_name) + userEmail + dateRun + startTimeRun
         FILENAME = FILENAME.replace(":", "")
@@ -211,25 +218,26 @@ class Camera : AppCompatActivity() {
                         baseContext,
                         arrayOf(savedUri.toFile().absolutePath),
                         arrayOf(mimeType)
-                    ){ _, _ -> }
+                    ){ _, uri ->
 
-                    val clMain = findViewById<ConstraintLayout>(R.id.clMain)
+                    }
+
+                    var clMain = findViewById<ConstraintLayout>(R.id.clMain)
                     Snackbar.make(clMain, "Imagen guardada con éxito", Snackbar.LENGTH_LONG).setAction("OK"){
                         clMain.setBackgroundColor(Color.CYAN)
                     }.show()
                 }
 
                 override fun onError(exception: ImageCaptureException) {
-                    val clMain = findViewById<ConstraintLayout>(R.id.clMain)
+                    var clMain = findViewById<ConstraintLayout>(R.id.clMain)
                     Snackbar.make(clMain, "Error al guardar la imagen", Snackbar.LENGTH_LONG).setAction("OK"){
                         clMain.setBackgroundColor(Color.CYAN)
                     }.show()
                 }
             })
     }
-
     private fun setGalleryThumbnail(uri: Uri){
-        val thumbnail = binding.photoViewButton
+        var thumbnail = binding.photoViewButton
         thumbnail.post {
             Glide.with (thumbnail)
                 .load(uri)

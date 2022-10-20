@@ -321,6 +321,16 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
     }
 
+    override fun onNavigationItemSelected(item: MenuItem): Boolean {
+        when(item.itemId){
+            R.id.nav_item_record -> callRecordActivity()
+            R.id.nav_item_clearpreferences -> alertClearPreferences()
+            R.id.nav_item_signout -> signOut()
+        }
+        drawer.closeDrawer(GravityCompat.START)
+        return true
+    }
+
     fun callInflateIntervalMode(v: View){
         inflateIntervalMode()
     }
@@ -1461,16 +1471,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         startActivity(Intent(this, LoginActivity::class.java))
     }
 
-    override fun onNavigationItemSelected(item: MenuItem): Boolean {
-        when(item.itemId){
-            R.id.nav_item_record -> callRecordActivity()
-            R.id.nav_item_clearpreferences -> alertClearPreferences()
-            R.id.nav_item_signout -> signOut()
-        }
-        drawer.closeDrawer(GravityCompat.START)
-        return true
-    }
-
     private fun callRecordActivity() {
         if(startButtonClicked) manageStartStop()
         startActivity(Intent(this, RecordActivity::class.java))
@@ -1674,7 +1674,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         mLocationRequest.priority = PRIORITY_HIGH_ACCURACY
         mLocationRequest.interval = 0
         mLocationRequest.fastestInterval = 0
-        mLocationRequest.numUpdates = 1
+        //mLocationRequest.numUpdates = 1
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         fusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallBack, Looper.myLooper())
@@ -1682,7 +1682,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     private val mLocationCallBack = object: LocationCallback(){
         override fun onLocationResult(locationResult: LocationResult) {
-            val mLastLocation : Location = locationResult.lastLocation
+            val mLastLocation : Location = locationResult.lastLocation!!
 
             init_lt = mLastLocation.latitude
             init_ln = mLastLocation.longitude
@@ -2147,10 +2147,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         if (recMaxSpeedSilver) medalMaxSpeed = "silver"
         if (recMaxSpeedBronze) medalMaxSpeed = "bronze"
 
-        val collection = "runs$sportSelected"
-        val dbRun = FirebaseFirestore.getInstance()
+        val document = FirebaseFirestore.getInstance().collection("runs$sportSelected").document(id)
 
-        dbRun.collection(collection).document(id).set(hashMapOf(
+        document.set(hashMapOf(
             "user" to userEmail,
             "date" to dateRun,
             "startTime" to startTimeRun,
@@ -2170,18 +2169,22 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             "centerLongitude" to centerLongitude
         ))
 
-        if (swIntervalMode.isChecked){
-            dbRun.collection(collection).document(id).update("intervalMode", true)
-            dbRun.collection(collection).document(id).update("intervalDuration", npDurationInterval.value)
-            dbRun.collection(collection).document(id).update("runningTime", tvRunningTime.text.toString())
-            dbRun.collection(collection).document(id).update("walkingTime", tvWalkingTime.text.toString())
-        }
-
+        var tmp :Double = 0.0
         if (swChallenges.isChecked){
             if (challengeDistance > 0f)
-                dbRun.collection(collection).document(id).update("challengeDistance", roundNumber(challengeDistance.toString(), 1).toDouble())
+                tmp = roundNumber(challengeDistance.toString(), 1).toDouble()
             if (challengeDuration > 0)
-                dbRun.collection(collection).document(id).update("challengeDuration", getFormattedStopWatch(challengeDuration.toLong()))
+                tmp = getFormattedStopWatch(challengeDuration.toLong()).toDouble()
+        }
+
+        if (swIntervalMode.isChecked){
+            document.update(mapOf(
+                "intervalMode" to true,
+                "intervalDuration" to npDurationInterval.value,
+                "runningTime" to tvRunningTime.text.toString(),
+                "walkingTime" to tvWalkingTime.text.toString(),
+                "challengeDuration" to tmp.toString()
+            ))
         }
     }
 
@@ -2195,7 +2198,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         recMaxSpeedGold = false
         recMaxSpeedSilver = false
         recMaxSpeedBronze = false
-
     }
 
     private fun resetVariablesRun(){
@@ -2226,7 +2228,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun resetTimeView(){
-
         initStopWatch()
         manageEnableButtonsRun(false, true)
 
@@ -2245,7 +2246,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         tvCurrentDistance.text = "0.0"
         tvCurrentAvgSpeed.text = "0.0"
         tvCurrentSpeed.text = "0.0"
-
 
         tvDistanceRecord.setTextColor(ContextCompat.getColor(this, R.color.gray_dark))
         tvAvgSpeedRecord.setTextColor(ContextCompat.getColor(this, R.color.gray_dark))
@@ -2294,7 +2294,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             s-= TIME_RUNNING
             val movement = -1 * (widthAnimations-(s*widthAnimations/(ROUND_INTERVAL-TIME_RUNNING))).toFloat()
             animateViewofFloat(lyRoundProgressBg, "translationX", movement, 1000L)
-
         }
     }
 
