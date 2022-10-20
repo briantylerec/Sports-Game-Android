@@ -29,6 +29,10 @@ android {
         viewBinding = true
     }
 
+    dataBinding {
+        enabled = true
+    }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
@@ -77,4 +81,20 @@ dependencies {
     implementation 'com.google.android.gms:play-services-location:17.0.0'
 
     implementation 'com.google.android.gms:play-services-maps:18.1.0'
+
+
+    //camera libraries
+    implementation 'androidx.camera:camera-view:1.0.0-alpha23'
+    implementation("androidx.camera:camera-core:1.0.1")
+    implementation("androidx.camera:camera-camera2:1.0.1")
+// If you want to additionally use the CameraX Lifecycle library
+    implementation("androidx.camera:camera-lifecycle:1.0.1")
+// If you want to additionally use the CameraX View class
+    implementation("androidx.camera:camera-view:1.0.0-alpha27")
+// If you want to additionally use the CameraX Extensions library
+    implementation("androidx.camera:camera-extensions:1.0.0-alpha27")
+
+
+    implementation 'com.github.bumptech.glide:glide:4.12.0'
+    annotationProcessor 'com.github.bumptech.glide:compiler:4.12.0'
 }

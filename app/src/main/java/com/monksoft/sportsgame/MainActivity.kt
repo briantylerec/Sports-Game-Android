@@ -81,6 +81,11 @@ import com.monksoft.sportsgame.Utility.roundNumber
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.collections.ArrayList
+import android.widget.Toast
+import android.content.Intent
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import android.app.NotificationChannel;
 
 class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener,
     OnMapReadyCallback, GoogleMap.OnMyLocationButtonClickListener,
@@ -235,6 +240,16 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private lateinit var medalsListSportSelectedAvgSpeed: ArrayList<Double>
     private lateinit var medalsListSportSelectedMaxSpeed: ArrayList<Double>
 
+    private var recDistanceGold: Boolean = false
+    private var recDistanceSilver: Boolean = false
+    private var recDistanceBronze: Boolean = false
+    private var recAvgSpeedGold: Boolean = false
+    private var recAvgSpeedSilver: Boolean = false
+    private var recAvgSpeedBronze: Boolean = false
+    private var recMaxSpeedGold: Boolean = false
+    private var recMaxSpeedSilver: Boolean = false
+    private var recMaxSpeedBronze: Boolean = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -242,6 +257,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         mainContext = this
 
+        showNotifications()
         initObjects()
 
         initToolBar()
@@ -253,10 +269,15 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     override fun onBackPressed() {
         //super.onBackPressed()
-        if (drawer.isDrawerOpen(GravityCompat.START))
-            drawer.closeDrawer(GravityCompat.START)
-        else
-            signOut()
+        if(lyPopupRun.isVisible) closePopUpRun()
+        else {
+            if (drawer.isDrawerOpen(GravityCompat.START))
+                drawer.closeDrawer(GravityCompat.START)
+            else {
+                if (timeInSeconds > 0L) resetClicked()
+                alertSignOut()
+            }
+        }
     }
 
     override fun onMapReady(googleMap: GoogleMap) {
@@ -422,6 +443,28 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         closePopUpRun()
     }
 
+    fun takePicture(v: View){
+        val intent = Intent(this, Camera::class.java)
+
+        val inParameter = intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        inParameter.putExtra("dateRun", dateRun)
+        inParameter.putExtra("startTimeRun", startTimeRun)
+
+        startActivity(intent)
+    }
+
+    private fun alertSignOut(){
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.alertSignOutTitle))
+            .setMessage(R.string.alertSignOutTDescription)
+            .setPositiveButton(android.R.string.ok,
+                DialogInterface.OnClickListener { _, _ -> signOut() })
+            .setNegativeButton(android.R.string.cancel,
+                DialogInterface.OnClickListener { _, _ -> })
+            .setCancelable(true)
+            .show()
+    }
+
     private fun setVolumes(){
         sbHardVolume.setOnSeekBarChangeListener(object: SeekBar.OnSeekBarChangeListener{
             override fun onProgressChanged(p0: SeekBar?, i: Int, p2: Boolean) {
@@ -507,6 +550,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         mpHard?.isLooping = true
         mpSoft?.isLooping = true
+        mpNotify?.isLooping = false
 
         sbHardVolume = findViewById(R.id.sbHardVolume)
         sbSoftVolume = findViewById(R.id.sbSoftVolume)
@@ -1428,6 +1472,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun callRecordActivity() {
+        if(startButtonClicked) manageStartStop()
         startActivity(Intent(this, RecordActivity::class.java))
     }
 
@@ -1663,6 +1708,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     val newPos = LatLng (new_latitude, new_longitude)
                     (listPoints as ArrayList<LatLng>).add(newPos)
                     createPolylines(listPoints)
+
+                    checkMedals(distance, avgSpeed, maxSpeed)
                 }
             }
         }
@@ -1689,6 +1736,123 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             }
             if (location.latitude > maxAltitude!!) maxAltitude = location.altitude
             if (location.latitude < minAltitude!!) minAltitude = location.altitude
+        }
+    }
+
+    private fun checkMedals(d: Double, aS: Double, mS: Double){
+        if (d>0){
+            if (d >= medalsListSportSelectedDistance.get(0)){
+                recDistanceGold = true; recDistanceSilver = false; recDistanceBronze = false
+                notifyMedal("distance", "gold", "PERSONAL")
+            }
+            else{
+                if (d >= medalsListSportSelectedDistance.get(1)){
+                    recDistanceGold = false; recDistanceSilver = true; recDistanceBronze = false
+                    notifyMedal("distance", "silver", "PERSONAL")
+                }
+                else{
+                    if (d >= medalsListSportSelectedDistance.get(2)){
+                        recDistanceGold = false; recDistanceSilver = false; recDistanceBronze = true
+                        notifyMedal("distance", "bronze", "PERSONAL")
+                    }
+                }
+            }
+        }
+
+        if (aS > 0){
+            if (aS >= medalsListSportSelectedAvgSpeed.get(0)){
+                recAvgSpeedGold = true; recAvgSpeedSilver = false; recAvgSpeedBronze = false
+                notifyMedal("avgSpeed", "gold", "PERSONAL")
+            }
+            else{
+                if (aS >= medalsListSportSelectedAvgSpeed.get(1)){
+                    recAvgSpeedGold = false; recAvgSpeedSilver = true; recAvgSpeedBronze = false
+                    notifyMedal("avgSpeed", "silver", "PERSONAL")
+                }
+                else{
+                    if (aS >= medalsListSportSelectedAvgSpeed.get(2)){
+                        recAvgSpeedGold = false; recAvgSpeedSilver = false; recAvgSpeedBronze = true
+                        notifyMedal("avgSpeed", "bronze", "PERSONAL")
+                    }
+                }
+            }
+        }
+
+        if (mS > 0){
+            if (mS >= medalsListSportSelectedMaxSpeed.get(0)){
+                recMaxSpeedGold = true; recMaxSpeedSilver = false; recMaxSpeedBronze = false
+                notifyMedal("maxSpeed", "gold", "PERSONAL")
+            }
+            else{
+                if (mS >= medalsListSportSelectedMaxSpeed.get(1)){
+                    recMaxSpeedGold = false; recMaxSpeedSilver = true; recMaxSpeedBronze = false
+                    notifyMedal("maxSpeed", "silver", "PERSONAL")
+                }
+                else{
+                    if (mS >= medalsListSportSelectedMaxSpeed.get(2)){
+                        recMaxSpeedGold = false; recMaxSpeedSilver = false; recMaxSpeedBronze = true
+                        notifyMedal("maxSpeed", "bronze", "PERSONAL")
+                    }
+                }
+            }
+        }
+    }
+
+    private fun notifyMedal(category: String, metal: String, scope: String){
+        val CHANNEL_ID = "NEW $scope RECORD - $sportSelected"
+
+        var textNotification =""
+        when (metal){
+            "gold"-> textNotification = "1ª "
+            "silver"-> textNotification = "2ª "
+            "bronze"-> textNotification = "3ª "
+        }
+        textNotification += "mejor marca personal en "
+        when (category){
+            "distance"-> textNotification += "distancia recorrida"
+            "avgSpeed"-> textNotification += " velocidad promedio"
+            "maxSpeed"-> textNotification += " velocidad máxima alcanzada"
+        }
+
+        var iconNotificacion: Int = 0
+        when (metal){
+            "gold" -> iconNotificacion = R.drawable.medalgold
+            "silver"-> iconNotificacion = R.drawable.medalsilver
+            "bronze"-> iconNotificacion = R.drawable.medalbronze
+        }
+
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(iconNotificacion)
+            .setContentTitle(CHANNEL_ID)
+            .setContentText(textNotification)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+
+
+        var notificationId: Int = 0
+        when (category){
+            "distance"->
+                when (metal){
+                    "gold"->notificationId = 11
+                    "silver"->notificationId = 12
+                    "bronze"->notificationId = 13
+                }
+            "avgSpeed"->
+                when (metal){
+                    "gold"->notificationId = 21
+                    "silver"->notificationId = 22
+                    "bronze"->notificationId = 23
+                }
+            "maxSpeed"->
+                when (metal){
+                    "gold"->notificationId = 31
+                    "silver"->notificationId = 32
+                    "bronze"->notificationId = 33
+                }
+        }
+
+        with(NotificationManagerCompat.from(this)) {
+            // notificationId is a unique int for each notification that you must define
+            notify(notificationId, builder.build())
         }
     }
 
@@ -1749,40 +1913,48 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         sportSelected = sport
 
-        val lySportBike = findViewById<LinearLayout>(R.id.lySportBike)
-        val lySportRollerSkate = findViewById<LinearLayout>(R.id.lySportRollerSkate)
-        val lySportRunning = findViewById<LinearLayout>(R.id.lySportRunning)
-
         when (sport){
             "Bike"->{
                 LIMIT_DISTANCE_ACCEPTED = LIMIT_DISTANCE_ACCEPTED_BIKE
 
-                lySportBike.setBackgroundColor(ContextCompat.getColor(mainContext, R.color.orange))
-                lySportRollerSkate.setBackgroundColor(ContextCompat.getColor(mainContext, R.color.gray_medium))
-                lySportRunning.setBackgroundColor(ContextCompat.getColor(mainContext, R.color.gray_medium))
+                binding.lySportBike.setBackgroundColor(ContextCompat.getColor(mainContext, R.color.orange))
+                binding.lySportRollerSkate.setBackgroundColor(ContextCompat.getColor(mainContext, R.color.gray_medium))
+                binding.lySportRunning.setBackgroundColor(ContextCompat.getColor(mainContext, R.color.gray_medium))
 
                 levelSelectedSport = levelBike
                 totalsSelectedSport = totalsBike
+
+                medalsListSportSelectedDistance = medalsListBikeDistance
+                medalsListSportSelectedAvgSpeed = medalsListBikeAvgSpeed
+                medalsListSportSelectedMaxSpeed = medalsListBikeMaxSpeed
             }
             "RollerSkate"->{
                 LIMIT_DISTANCE_ACCEPTED = LIMIT_DISTANCE_ACCEPTED_ROLLERSKATE
 
-                lySportBike.setBackgroundColor(ContextCompat.getColor(mainContext, R.color.gray_medium))
-                lySportRollerSkate.setBackgroundColor(ContextCompat.getColor(mainContext, R.color.orange))
-                lySportRunning.setBackgroundColor(ContextCompat.getColor(mainContext, R.color.gray_medium))
+                binding.lySportBike.setBackgroundColor(ContextCompat.getColor(mainContext, R.color.gray_medium))
+                binding.lySportRollerSkate.setBackgroundColor(ContextCompat.getColor(mainContext, R.color.orange))
+                binding.lySportRunning.setBackgroundColor(ContextCompat.getColor(mainContext, R.color.gray_medium))
 
                 levelSelectedSport = levelRollerSkate
                 totalsSelectedSport = totalsRollerSkate
+
+                medalsListSportSelectedDistance = medalsListRollerSkateDistance
+                medalsListSportSelectedAvgSpeed = medalsListRollerSkateAvgSpeed
+                medalsListSportSelectedMaxSpeed = medalsListRollerSkateMaxSpeed
             }
             "Running"->{
                 LIMIT_DISTANCE_ACCEPTED = LIMIT_DISTANCE_ACCEPTED_RUNNING
 
-                lySportBike.setBackgroundColor(ContextCompat.getColor(mainContext, R.color.gray_medium))
-                lySportRollerSkate.setBackgroundColor(ContextCompat.getColor(mainContext, R.color.gray_medium))
-                lySportRunning.setBackgroundColor(ContextCompat.getColor(mainContext, R.color.orange))
+                binding.lySportBike.setBackgroundColor(ContextCompat.getColor(mainContext, R.color.gray_medium))
+                binding.lySportRollerSkate.setBackgroundColor(ContextCompat.getColor(mainContext, R.color.gray_medium))
+                binding.lySportRunning.setBackgroundColor(ContextCompat.getColor(mainContext, R.color.orange))
 
                 levelSelectedSport = levelRunning
                 totalsSelectedSport = totalsRunning
+
+                medalsListSportSelectedDistance = medalsListRunningDistance
+                medalsListSportSelectedAvgSpeed = medalsListRunningAvgSpeed
+                medalsListSportSelectedMaxSpeed = medalsListRunningMaxSpeed
             }
         }
 
@@ -1842,10 +2014,25 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         dbUpdateTotals.collection(collection).document(userEmail).update("totalRuns", totalsSelectedSport.totalRuns)
         dbUpdateTotals.collection(collection).document(userEmail).update("totalTime", totalsSelectedSport.totalTime)
 
-        when ( sportSelected ){
-            "Bike"          -> totalsBike = totalsSelectedSport
-            "RollerSkate"   -> totalsRollerSkate = totalsSelectedSport
-            "Running"       -> totalsRunning = totalsSelectedSport
+        when (sportSelected){
+            "Bike" -> {
+                totalsBike = totalsSelectedSport
+                medalsListBikeDistance = medalsListSportSelectedDistance
+                medalsListBikeAvgSpeed = medalsListSportSelectedAvgSpeed
+                medalsListBikeMaxSpeed = medalsListSportSelectedMaxSpeed
+            }
+            "RollerSkate" -> {
+                totalsRollerSkate = totalsSelectedSport
+                medalsListRollerSkateDistance = medalsListSportSelectedDistance
+                medalsListRollerSkateAvgSpeed = medalsListSportSelectedAvgSpeed
+                medalsListRollerSkateMaxSpeed = medalsListSportSelectedMaxSpeed
+            }
+            "Running" -> {
+                totalsRunning = totalsSelectedSport
+                medalsListRunningDistance = medalsListSportSelectedDistance
+                medalsListRunningAvgSpeed = medalsListSportSelectedAvgSpeed
+                medalsListRunningMaxSpeed = medalsListSportSelectedMaxSpeed
+            }
         }
     }
 
@@ -1866,15 +2053,50 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         tvCurrentSpeed.text = roundNumber(speed.toString(), 1)
 
         csbCurrentDistance.progress = distance.toFloat()
-        csbCurrentAvgSpeed.progress = avgSpeed.toFloat()
-        csbCurrentSpeed.progress = speed.toFloat()
+        if (distance > totalsSelectedSport.recordDistance!!){
+            tvDistanceRecord.text = roundNumber(distance.toString(), 1)
+            tvDistanceRecord.setTextColor(ContextCompat.getColor(this, R.color.salmon_dark))
 
-        if (speed == maxSpeed){
-            csbCurrentMaxSpeed.max = csbRecordSpeed.max
+            csbCurrentDistance.max = distance.toFloat()
+            csbCurrentDistance.progress = distance.toFloat()
+
+            totalsSelectedSport.recordDistance = distance
+        }
+
+        csbCurrentAvgSpeed.progress = avgSpeed.toFloat()
+        if (avgSpeed > totalsSelectedSport.recordAvgSpeed!!){
+            tvAvgSpeedRecord.text = roundNumber(avgSpeed.toString(), 1)
+            tvAvgSpeedRecord.setTextColor(ContextCompat.getColor(this, R.color.salmon_dark))
+
+            csbRecordAvgSpeed.max = avgSpeed.toFloat()
+            csbRecordAvgSpeed.progress = avgSpeed.toFloat()
+            csbCurrentAvgSpeed.max = avgSpeed.toFloat()
+
+            totalsSelectedSport.recordAvgSpeed = avgSpeed
+        }
+        if (speed > totalsSelectedSport.recordSpeed!!){
+            tvMaxSpeedRecord.text = roundNumber(speed.toString(), 1)
+            tvMaxSpeedRecord.setTextColor(ContextCompat.getColor(this, R.color.salmon_dark))
+
+            csbRecordSpeed.max = speed.toFloat()
+            csbRecordSpeed.progress = speed.toFloat()
+
+            csbCurrentMaxSpeed.max = speed.toFloat()
             csbCurrentMaxSpeed.progress = speed.toFloat()
 
-            csbCurrentSpeed.max = csbRecordSpeed.max
+            csbCurrentSpeed.max = speed.toFloat()
+
+            totalsSelectedSport.recordSpeed = speed
+
+        } else {
+            if (speed == maxSpeed){
+                csbCurrentMaxSpeed.max = csbRecordSpeed.max
+                csbCurrentMaxSpeed.progress = speed.toFloat()
+
+                csbCurrentSpeed.max = csbRecordSpeed.max
+            }
         }
+        csbCurrentSpeed.progress = speed.toFloat()
     }
 
     private fun updateStopWatchView(){
@@ -1889,8 +2111,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         setLevelSport(sportSelected)
 
         showPopUp()
+
         resetTimeView()
         resetInterface()
+        resetMedals()
     }
 
     private fun saveDataRun() {
@@ -1906,6 +2130,22 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         val centerLatitude = (minLatitude!! + maxLatitude!!) / 2
         val centerLongitude = (minLongitude!! + maxLongitude!!) / 2
+
+        var medalDistance = "none"
+        var medalAvgSpeed = "none"
+        var medalMaxSpeed = "none"
+
+        if (recDistanceGold) medalDistance = "gold"
+        if (recDistanceSilver) medalDistance = "silver"
+        if (recDistanceBronze) medalDistance = "bronze"
+
+        if (recAvgSpeedGold) medalAvgSpeed = "gold"
+        if (recAvgSpeedSilver) medalAvgSpeed = "silver"
+        if (recAvgSpeedBronze) medalAvgSpeed = "bronze"
+
+        if (recMaxSpeedGold) medalMaxSpeed = "gold"
+        if (recMaxSpeedSilver) medalMaxSpeed = "silver"
+        if (recMaxSpeedBronze) medalMaxSpeed = "bronze"
 
         val collection = "runs$sportSelected"
         val dbRun = FirebaseFirestore.getInstance()
@@ -1943,6 +2183,19 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             if (challengeDuration > 0)
                 dbRun.collection(collection).document(id).update("challengeDuration", getFormattedStopWatch(challengeDuration.toLong()))
         }
+    }
+
+    private fun resetMedals(){
+        recDistanceGold = false
+        recDistanceSilver = false
+        recDistanceBronze = false
+        recAvgSpeedGold = false
+        recAvgSpeedSilver = false
+        recAvgSpeedBronze = false
+        recMaxSpeedGold = false
+        recMaxSpeedSilver = false
+        recMaxSpeedBronze = false
+
     }
 
     private fun resetVariablesRun(){
@@ -2192,6 +2445,23 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     private fun showMedals(){
 
+        if (recDistanceGold) binding.ivMedalDistance.setImageResource(R.drawable.medalgold)
+        if (recDistanceSilver) binding.ivMedalDistance.setImageResource(R.drawable.medalsilver)
+        if (recDistanceBronze) binding.ivMedalDistance.setImageResource(R.drawable.medalbronze)
+        if (recDistanceGold || recDistanceSilver || recDistanceBronze)
+            binding.tvMedalDistanceTitle.setText(R.string.medalDistanceDescription)
+
+        if (recAvgSpeedGold) binding.ivMedalAvgSpeed.setImageResource(R.drawable.medalgold)
+        if (recAvgSpeedSilver) binding.ivMedalAvgSpeed.setImageResource(R.drawable.medalsilver)
+        if (recAvgSpeedBronze) binding.ivMedalAvgSpeed.setImageResource(R.drawable.medalbronze)
+        if (recAvgSpeedGold || recAvgSpeedSilver || recAvgSpeedBronze)
+            binding.tvMedalAvgSpeedTitle.setText(R.string.medalAvgSpeedDescription)
+
+        if (recMaxSpeedGold) binding.ivMedalMaxSpeed.setImageResource(R.drawable.medalgold)
+        if (recMaxSpeedSilver) binding.ivMedalMaxSpeed.setImageResource(R.drawable.medalsilver)
+        if (recMaxSpeedBronze) binding.ivMedalMaxSpeed.setImageResource(R.drawable.medalbronze)
+        if (recMaxSpeedGold || recMaxSpeedSilver || recMaxSpeedBronze)
+            binding.tvMedalMaxSpeedTitle.setText(R.string.medalMaxSpeedDescription)
     }
 
     private fun showDataRun(){
@@ -2277,5 +2547,36 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         medalsListRunningDistance.clear()
         medalsListRunningAvgSpeed.clear()
         medalsListRunningMaxSpeed.clear()
+    }
+
+    private fun showNotifications(){
+        val dbRecords = FirebaseFirestore.getInstance()
+        dbRecords.collection("notifications")
+            .get()
+            .addOnSuccessListener { documents ->
+                for (document in documents) {
+
+                    val CHANNEL_ID = document.id.toString()
+
+                    val textTitle = document["titulo"].toString()
+                    val textNotification = document["descripcion"].toString()
+                    val notificationId: Int = document["id"].toString().toInt()
+                    val iconNotificacion: Int = R.drawable.medalgold
+
+                    val builder = NotificationCompat.Builder(this, CHANNEL_ID)
+                        .setSmallIcon(iconNotificacion)
+                        .setContentTitle(textTitle)
+                        .setContentText(textNotification)
+                        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+
+                    with(NotificationManagerCompat.from(this)) {
+                        // notificationId is a unique int for each notification that you must define
+                        notify(notificationId, builder.build())
+                    }
+                }
+            }
+            .addOnFailureListener { exception ->
+                Log.w("TEST1: ", "Error getting documents: ", exception)
+            }
     }
 }
