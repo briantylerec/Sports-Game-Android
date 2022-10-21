@@ -204,7 +204,6 @@ object Utility {
         }
     }
 
-
     private fun checkMaxSpeedRecord(cr: Runs, sport: String, user: String){
         if (cr.maxSpeed!! == totalsSelectedSport.recordSpeed){
             val dbRecords = FirebaseFirestore.getInstance()
