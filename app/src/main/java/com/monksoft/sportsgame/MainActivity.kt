@@ -105,6 +105,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             arrayOf(
                 Manifest.permission.ACCESS_COARSE_LOCATION,
                 Manifest.permission.ACCESS_FINE_LOCATION)
+
+        var countPhotos: Int = 0
+        var lastimage: String = ""
     }
 
     private lateinit var sharedPreferences : SharedPreferences

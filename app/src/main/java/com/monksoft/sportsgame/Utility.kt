@@ -9,8 +9,12 @@ import android.widget.LinearLayout
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.storage.FirebaseStorage
+import com.google.firebase.storage.ktx.storage
 import com.monksoft.sportsgame.LoginActivity.Companion.userEmail
 import com.monksoft.sportsgame.MainActivity.Companion.activatedGPS
+import com.monksoft.sportsgame.MainActivity.Companion.countPhotos
 import com.monksoft.sportsgame.MainActivity.Companion.totalsBike
 import com.monksoft.sportsgame.MainActivity.Companion.totalsRollerSkate
 import com.monksoft.sportsgame.MainActivity.Companion.totalsRunning
@@ -110,10 +114,29 @@ object Utility {
     fun deleteRunAndLinkedData(idRun: String, sport: String, ly: LinearLayout, cr: Runs){
 
         if (activatedGPS) deleteLocations(idRun, userEmail)
+        if(countPhotos > 0) deletePicutresRun(idRun)
         //si habia fotos, borramos todas las fotos
         updateTotals(cr)
         checkRecords(cr, sport, userEmail)
         deleteRun(idRun, sport, ly)
+    }
+
+    private fun deletePicutresRun(idRun: String){
+        val idFolder = idRun.subSequence(userEmail.length, idRun.length).toString()
+        val delRef = FirebaseStorage.getInstance().getReference("images/$userEmail/$idFolder")
+        val storage = Firebase.storage
+        val listRef = storage.reference.child("images/$userEmail/$idFolder")
+        listRef.listAll().addOnSuccessListener { (items, prefixes) ->
+            prefixes.forEach { prefix ->
+                // All the prefixes under listRef.
+                // You may call listAll() recursively on them.
+            }
+            items.forEach { item ->
+                val storageRef = storage.reference
+                val deleteRef = storageRef.child((item.path))
+                deleteRef.delete()
+            }
+        }.addOnFailureListener { }
     }
 
     private fun deleteLocations(idRun: String, user: String){

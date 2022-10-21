@@ -1,17 +1,23 @@
 package com.monksoft.sportsgame
 
 import android.content.Context
+import android.graphics.BitmapFactory
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.gms.tasks.Task
+import com.google.firebase.storage.FirebaseStorage
+import com.google.firebase.storage.StorageMetadata
 import com.monksoft.sportsgame.LoginActivity.Companion.userEmail
 import com.monksoft.sportsgame.Utility.animateViewofFloat
 import com.monksoft.sportsgame.Utility.deleteRunAndLinkedData
 import com.monksoft.sportsgame.Utility.setHeightLinearLayout
+import java.io.File
 
 class RunsAdapter(private val runsList: ArrayList<Runs>) :RecyclerView.Adapter<RunsAdapter.MyViewHolder>() {
 
@@ -153,6 +159,41 @@ class RunsAdapter(private val runsList: ArrayList<Runs>) :RecyclerView.Adapter<R
             }
         }
 
+        if(run.lastimage!="") {
+
+            val path = run.lastimage
+            val storageRef = FirebaseStorage.getInstance().reference.child(path!!)
+            val localfile = File.createTempFile("tempImage", "jpg")
+
+            storageRef.getFile(localfile).addOnSuccessListener {
+                val bitmap = BitmapFactory.decodeFile(localfile.absolutePath)
+                val metaRef = FirebaseStorage.getInstance().getReference(run.lastimage!!)
+                val metadata: Task<StorageMetadata> = metaRef.metadata
+
+                metadata.addOnSuccessListener {
+
+                    val or = it.getCustomMetadata("orientation")
+                    if (or == "horizontal") {
+
+                        val porcent = 100 / bitmap.width.toFloat()
+
+                        setHeightLinearLayout(holder.lyPicture, (bitmap.width * porcent).toInt())
+                        holder.ivPicture.setImageBitmap(bitmap)
+
+                    } else {
+                        val porcent = 100 / bitmap.height.toFloat()
+
+                        setHeightLinearLayout(holder.lyPicture, (bitmap.width * porcent).toInt())
+                        holder.ivPicture.setImageBitmap(bitmap)
+                        holder.ivPicture.rotation = 90f
+                    }
+                }
+                metadata.addOnFailureListener { }
+            }.addOnFailureListener {
+                Toast.makeText(context, "fallo al cargar la imagen", Toast.LENGTH_SHORT).show()
+            }
+        }
+
         holder.tvDelete.setOnClickListener{
             val id:String = (userEmail + run.date + run.startTime).replace(":", "").replace("/", "")
 
@@ -218,6 +259,4 @@ class RunsAdapter(private val runsList: ArrayList<Runs>) :RecyclerView.Adapter<R
         val tvPlay: TextView = itemView.findViewById(R.id.tvPlay)
         val tvDelete: TextView = itemView.findViewById(R.id.tvDelete)
     }
-
-
 }
