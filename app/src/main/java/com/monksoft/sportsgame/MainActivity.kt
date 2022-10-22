@@ -86,6 +86,7 @@ import android.content.Intent
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import android.app.NotificationChannel;
+import android.appwidget.AppWidgetManager
 
 class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener,
     OnMapReadyCallback, GoogleMap.OnMyLocationButtonClickListener,
@@ -108,6 +109,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         var countPhotos: Int = 0
         var lastimage: String = ""
+
+        lateinit var chronoWidget: String
+        lateinit var distanceWidget: String
     }
 
     private lateinit var sharedPreferences : SharedPreferences
@@ -253,6 +257,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private var recMaxSpeedSilver: Boolean = false
     private var recMaxSpeedBronze: Boolean = false
 
+    private lateinit var widget: Widget
+    private lateinit var mAppWidgetManager: AppWidgetManager
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -267,6 +274,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         initNavigationView()
         initPermissionsGPS()
 
+        initWidget()
         loadFromDB()
     }
 
@@ -464,6 +472,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         inParameter.putExtra("startTimeRun", startTimeRun)
 
         startActivity(intent)
+    }
+
+    fun shareRun(v: View) {
+        callShareRun()
     }
 
     private fun alertSignOut(){
@@ -1644,6 +1656,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
                 timeInSeconds += 1
                 updateStopWatchView()
+
+                updateWidegts()
+
             } finally {
                 mHandler!!.postDelayed(this, mInterval.toLong())
             }
@@ -1671,13 +1686,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         } else requestPermissionLocation()
     }
 
-    @SuppressLint("MissingPermission")
     private fun requestNewLocationData(){
         val mLocationRequest = LocationRequest()
         mLocationRequest.priority = PRIORITY_HIGH_ACCURACY
         mLocationRequest.interval = 0
         mLocationRequest.fastestInterval = 0
-        //mLocationRequest.numUpdates = 1
+        mLocationRequest.numUpdates = 1
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         fusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallBack, Looper.myLooper())
@@ -2580,5 +2594,107 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             .addOnFailureListener { exception ->
                 Log.w("TEST1: ", "Error getting documents: ", exception)
             }
+    }
+
+    private fun callShareRun(){
+
+        val idRun = dateRun + startTimeRun.replace(":", "").replace("/", "")
+
+        var centerLatitude: Double = 0.0
+        var centerLongitude: Double = 0.0
+
+        if (activatedGPS){
+            centerLatitude = ((minLatitude!! + maxLatitude!!)/2)
+            centerLongitude = ((minLongitude!! + maxLongitude!!)/2)
+        }
+
+        val saveDuration = tvChrono.text.toString()
+        val saveDistance = roundNumber(distance.toString(),1)
+        val saveMaxSpeed = roundNumber(maxSpeed.toString(),1)
+        val saveAvgSpeed = roundNumber(avgSpeed.toString(),1)
+
+        var medalDistance = "none"
+        var medalAvgSpeed = "none"
+        var medalMaxSpeed = "none"
+
+        if (recDistanceGold) medalDistance = "gold"
+        if (recDistanceSilver) medalDistance = "silver"
+        if (recDistanceBronze) medalDistance = "bronze"
+
+        if (recAvgSpeedGold) medalAvgSpeed = "gold"
+        if (recAvgSpeedSilver) medalAvgSpeed = "silver"
+        if (recAvgSpeedBronze) medalAvgSpeed = "bronze"
+
+        if (recMaxSpeedGold) medalMaxSpeed = "gold"
+        if (recMaxSpeedSilver) medalMaxSpeed = "silver"
+        if (recMaxSpeedBronze) medalMaxSpeed = "bronze"
+
+        //ENVIO DE PARAMETROS
+        val intent = Intent(this, RunActivity::class.java)
+
+        val inParameter = intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        inParameter.apply {
+            putExtra("user", userEmail)
+            putExtra("idRun", idRun)
+            putExtra("centerLatitude", centerLatitude)
+            putExtra("centerLongitude", centerLongitude)
+            putExtra("countPhotos", countPhotos)
+            putExtra("lastimage", lastimage)
+            putExtra("date", dateRun)
+            putExtra("startTime", startTimeRun)
+            putExtra("duration", saveDuration)
+            putExtra("distance", saveDistance.toDouble())
+            putExtra("maxSpeed", saveMaxSpeed.toDouble())
+            putExtra("avgSpeed", saveAvgSpeed.toDouble())
+            putExtra("minAltitude", minAltitude)
+            putExtra("maxAltitude", maxAltitude)
+            putExtra("medalDistance", medalDistance)
+            putExtra("medalAvgSpeed", medalAvgSpeed)
+            putExtra("medalMaxSpeed", medalMaxSpeed)
+            putExtra("activatedGPS", activatedGPS)
+            putExtra("sport", sportSelected)
+            putExtra("intervalMode", swIntervalMode.isChecked)
+        }
+
+        if (swIntervalMode.isChecked){
+            inParameter.putExtra("intervalDuration", npDurationInterval.value)
+            inParameter.putExtra("runningTime", tvRunningTime.text.toString())
+            inParameter.putExtra("walkingTime", tvWalkingTime.text.toString())
+        }
+        if (swChallenges.isChecked){
+            if (challengeDistance > 0f)
+                inParameter.putExtra("challengeDistance", roundNumber(challengeDistance.toString(), 1).toDouble())
+            if (challengeDuration > 0)
+                inParameter.putExtra("challengeDuration", getFormattedStopWatch(challengeDuration.toLong()))
+        }
+
+        inParameter.apply {
+            putExtra("level_n", levelSelectedSport.name)
+            putExtra("image_level", levelSelectedSport.image)
+            putExtra("distanceTarget", levelSelectedSport.DistanceTarget!!.toDouble())
+            putExtra("distanceTotal", totalsSelectedSport.totalDistance)
+            putExtra("runsTarget", levelSelectedSport.RunsTarget!!.toInt())
+            putExtra("runsTotal", totalsSelectedSport.totalRuns)
+        }
+
+        startActivity(intent)
+    }
+
+    private fun initWidget(){
+        widget = Widget()
+        mAppWidgetManager = AppWidgetManager.getInstance(mainContext)!!
+        updateWidegts()
+    }
+
+    private fun updateWidegts(){
+        chronoWidget = tvChrono.text.toString()
+        distanceWidget = roundNumber(distance.toString(),1)
+
+        val intent = Intent(application, Widget::class.java)
+        intent.action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+
+        val ids = mAppWidgetManager.getAppWidgetIds(ComponentName(application, Widget::class.java))
+        intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
+        sendBroadcast(intent)
     }
 }

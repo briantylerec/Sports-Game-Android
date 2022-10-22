@@ -1,6 +1,7 @@
 package com.monksoft.sportsgame
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.BitmapFactory
 import android.view.LayoutInflater
 import android.view.View
@@ -192,6 +193,44 @@ class RunsAdapter(private val runsList: ArrayList<Runs>) :RecyclerView.Adapter<R
             }.addOnFailureListener {
                 Toast.makeText(context, "fallo al cargar la imagen", Toast.LENGTH_SHORT).show()
             }
+        }
+
+        holder.tvPlay.setOnClickListener {
+            var idRun = (run.date + run.startTime).replace(":", "").replace("/", "")
+
+            //ENVIO DE PARAMETROS
+            val intent = Intent(context, RunActivity::class.java)
+            val inParameter = intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+
+            inParameter.apply {
+                putExtra("user", run.user)
+                putExtra("idRun", idRun)
+                putExtra("countPhotos", run.countPhotos)
+                putExtra("lastimage", run.lastimage)
+                putExtra("centerLatitude", run.centerLatitude)
+                putExtra("centerLongitude", run.centerLongitude)
+                putExtra("date", run.date)
+                putExtra("startTime", run.startTime)
+                putExtra("duration", run.duration)
+                putExtra("distance", run.distance)
+                putExtra("maxSpeed", run.maxSpeed)
+                putExtra("avgSpeed", run.avgSpeed)
+                putExtra("minAltitude", run.minAltitude)
+                putExtra("maxAltitude", run.maxAltitude)
+                putExtra("medalDistance", run.medalDistance)
+                putExtra("medalAvgSpeed", run.medalAvgSpeed)
+                putExtra("medalMaxSpeed", run.medalMaxSpeed)
+                putExtra("activatedGPS", run.activatedGPS)
+                putExtra("sport", run.sport)
+                putExtra("intervalMode", run.intervalMode)
+                putExtra("intervalDuration", run.intervalDuration)
+                putExtra("runningTime", run.runningTime)
+                putExtra("walkingTime", run.walkingTime)
+                putExtra("challengeDistance", run.challengeDistance)
+                putExtra("challengeDuration", run.challengeDuration)
+            }
+
+            context.startActivity(intent)
         }
 
         holder.tvDelete.setOnClickListener{

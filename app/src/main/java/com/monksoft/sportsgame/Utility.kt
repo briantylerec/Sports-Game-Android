@@ -122,21 +122,24 @@ object Utility {
     }
 
     private fun deletePicutresRun(idRun: String){
+
         val idFolder = idRun.subSequence(userEmail.length, idRun.length).toString()
         val delRef = FirebaseStorage.getInstance().getReference("images/$userEmail/$idFolder")
         val storage = Firebase.storage
         val listRef = storage.reference.child("images/$userEmail/$idFolder")
-        listRef.listAll().addOnSuccessListener { (items, prefixes) ->
-            prefixes.forEach { prefix ->
-                // All the prefixes under listRef.
-                // You may call listAll() recursively on them.
-            }
-            items.forEach { item ->
-                val storageRef = storage.reference
-                val deleteRef = storageRef.child((item.path))
-                deleteRef.delete()
-            }
-        }.addOnFailureListener { }
+
+        //el codigo acontinuacion no funciona
+//        listRef.listAll().addOnSuccessListener { (items, prefixes) ->
+//            prefixes.forEach { prefix ->
+//                // All the prefixes under listRef.
+//                // You may call listAll() recursively on them.
+//            }
+//            items.forEach { item ->
+//                val storageRef = storage.reference
+//                val deleteRef = storageRef.child((item.path))
+//                deleteRef.delete()
+//            }
+//        }.addOnFailureListener { }
     }
 
     private fun deleteLocations(idRun: String, user: String){

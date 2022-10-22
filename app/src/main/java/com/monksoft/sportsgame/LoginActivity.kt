@@ -51,6 +51,8 @@ class LoginActivity : AppCompatActivity() {
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        userEmail = ""
+
         binding.lyTerms.visibility = View.INVISIBLE
         binding.etRepeatPassword.visibility = View.GONE
         mAuth = FirebaseAuth.getInstance()
